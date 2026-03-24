@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --vbs-grid-size: 16px;
+    --vbs-entity-min-width: 200px;
+    --vbs-entity-min-height: 100px;
+    --vbs-edge-thickness: 3px;
+    --vbs-edge-thickness-hover: 5px;
+  }
+}
+
+@layer components {
+  .vbs-entity {
+    @apply bg-vbs-entity-bg border border-vbs-entity-border rounded-lg shadow-sm;
+    @apply transition-all duration-200 ease-in-out;
+    @apply hover:bg-vbs-entity-hover hover:shadow-md;
+  }
+  
+  .vbs-edge {
+    @apply border-vbs-edge-default;
+    border-width: var(--vbs-edge-thickness);
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .vbs-edge:hover {
+    @apply border-vbs-edge-hover;
+    border-width: var(--vbs-edge-thickness-hover);
+  }
+  
+  .vbs-grid {
+    background-image: 
+      linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+      linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+    background-size: var(--vbs-grid-size) var(--vbs-grid-size);
+  }
+  
+  .vbs-canvas {
+    @apply w-full h-full overflow-hidden relative;
+    @apply select-none cursor-default;
+  }
+}

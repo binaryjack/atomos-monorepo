@@ -1,0 +1,25 @@
+{
+  "name": "@vbs/vbs-mod",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "test": "vitest",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit",
+    "clean": "powershell -Command \"Remove-Item -Force -Recurse dist -ErrorAction SilentlyContinue; Get-ChildItem src -Recurse -Include *.js,*.d.ts,*.js.map,*.d.ts.map | Remove-Item -Force\""
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

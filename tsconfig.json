@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@vbs/vbs-mod": ["packages/vbs-mod/src/index.ts"],
+      "@vbs/vbs-style": ["packages/vbs-style/src/index.ts"],
+      "@vbs/web-ui": ["packages/web-ui/src/index.ts"],
+      "@vbs/vbs-mcp": ["packages/vbs-mcp/src/index.ts"],
+      "@vbs/vbs": ["packages/vbs/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/src/**/*"],
+  "exclude": ["node_modules", "dist", "build"],
+  "references": [
+    { "path": "./packages/vbs-mod" },
+    { "path": "./packages/vbs-style" },
+    { "path": "./packages/web-ui" },
+    { "path": "./packages/vbs-mcp" },
+    { "path": "./packages/vbs" }
+  ]
+}
