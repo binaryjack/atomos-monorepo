@@ -1,4 +1,5 @@
 import { createSignal } from '../core/create-signal.js';
+import { createCanvasViewport } from '../core/create-canvas-viewport.js';
 import { createTypography } from '../features/typography/create-typography.js';
 import { createButton } from '../features/button/create-button.js';
 import { createInput } from '../features/input/create-input.js';
@@ -9,7 +10,7 @@ import { createCard } from '../features/card/create-card.js';
 import { createAccordion } from '../features/accordion/create-accordion.js';
 import { createSkeleton } from '../features/skeleton/create-skeleton.js';
 import { createIcon } from '../features/icon/create-icon.js';
-import { createWorkspaceManager } from '../core/workspace-manager.js';
+import { createWorkspaceManager } from '../core/create-workspace-manager.js';
 import { createInteractiveEntityDemo } from '../features/entity-with-edges/create-interactive-entity-demo.js';
 import { createPreviewSection } from './create-preview-section.js';
 
@@ -335,29 +336,43 @@ export const createPreviewPage = function() {
   const workspaceContainer = document.createElement('div');
   workspaceContainer.className = 'relative w-full bg-base-50 border border-base-200 rounded-lg overflow-hidden';
   workspaceContainer.style.height = '600px';
-  
-  // Create SVG canvas for entity interactions
+  workspaceContainer.style.position = 'relative';
+
+  // 4000×4000 SVG canvas
   const svgCanvas = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svgCanvas.setAttribute('width', '100%');
   svgCanvas.setAttribute('height', '100%');
-  svgCanvas.setAttribute('viewBox', '0 0 1000 600');
-  svgCanvas.style.cursor = 'default';
-  
-  // Initialize workspace manager
-  const workspaceManager = createWorkspaceManager(svgCanvas);
+  svgCanvas.style.cssText = 'display:block;cursor:default;';
+
+  // Viewport group — all world-space content lives here
+  const viewportGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  viewportGroup.id = 'vbs-viewport';
+  svgCanvas.appendChild(viewportGroup);
+
+  // Pan/zoom viewport — attach wheel/drag to workspaceContainer so the div receives events
+  const viewport = createCanvasViewport(workspaceContainer, svgCanvas);
+  viewport.state.subscribe(() => {
+    viewportGroup.setAttribute('transform', viewport.transform());
+  });
+  viewportGroup.setAttribute('transform', viewport.transform());
+  cleanupFunctions.push(viewport.cleanup);
+
+  // Initialize workspace manager with SVG for CTM and viewportGroup as content root
+  const workspaceManager = createWorkspaceManager(svgCanvas, viewportGroup);
   cleanupFunctions.push(workspaceManager.cleanup.destroy);
-  
+
   // Create interactive entity demo
   createInteractiveEntityDemo(workspaceManager);
-  
+
   workspaceContainer.appendChild(svgCanvas);
-  
+
   // Add workspace instructions
   const instructionsHeader = document.createElement('div');
   instructionsHeader.className = 'absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded px-3 py-2 text-xs text-base-700 border border-base-200 max-w-md';
+  instructionsHeader.style.pointerEvents = 'none';
   instructionsHeader.innerHTML = `
     <div class="font-medium mb-1">Interactive Entity Workspace</div>
-    <div class="text-xs opacity-75">• Drag entities to move them • Resize using corner handles • Click anchors to create links • ESC to cancel operations</div>
+    <div class="text-xs opacity-75">• Scroll to zoom • Middle-drag or bg-drag to pan • Drag entities to move • Corner handles to resize • Click anchors to link • ESC to cancel</div>
   `;
   workspaceContainer.appendChild(instructionsHeader);
   

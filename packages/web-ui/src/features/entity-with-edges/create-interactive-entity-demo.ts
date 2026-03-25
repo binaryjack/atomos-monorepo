@@ -1,48 +1,52 @@
-import type { WorkspaceManager, EntityInstance } from '../../core/workspace-manager.js';
-import { createSignal } from '../../core/create-signal.js';
+﻿import { createSignal } from '../../core/create-signal.js';
 import { createDemoEntity } from './create-demo-entity.js';
-
+import type { WorkspaceManager } from '../../core/types/workspace-manager.types.js';
+import type { EntityInstance } from '../../core/types/entity-instance.types.js';
+import type { EntitySpawnFactory } from '../../core/types/entity-spawn-factory.types.js';
+import { ENTITY_DEFAULT_WIDTH, ENTITY_DEFAULT_HEIGHT } from '../../core/entity-defaults.js';
 
 interface DemoConfig {
   readonly id: string;
   readonly title: string;
   readonly x: number;
   readonly y: number;
-  readonly width: number;
-  readonly height: number;
 }
 
+const spawnDemoEntity = (
+  id: string,
+  position: { x: number; y: number },
+  workspace: WorkspaceManager,
+  title = 'New Entity'
+): EntityInstance => {
+  const posSignal  = createSignal(position);
+  const dimsSignal = createSignal({ width: ENTITY_DEFAULT_WIDTH, height: ENTITY_DEFAULT_HEIGHT });
+  const entity = createDemoEntity({ id, title, position: posSignal, dimensions: dimsSignal, workspace });
+  entity.edgeElements.forEach(el => workspace.appendToCanvas(el));
+  return entity.instance;
+};
+
 export const createInteractiveEntityDemo = function(workspace: WorkspaceManager) {
+  // Register the spawn factory so workspace can auto-create entities on link-drop
+  const factory: EntitySpawnFactory = (id, pos, ws) => spawnDemoEntity(id, pos, ws);
+  workspace.setEntitySpawnFactory(factory);
+
   const configs: DemoConfig[] = [
-    { id: 'entity-a', title: 'Data Source',  x: 80,  y: 100, width: 200, height: 80 },
-    { id: 'entity-b', title: 'Processor',    x: 400, y: 150, width: 180, height: 80 },
-    { id: 'entity-c', title: 'Output',       x: 250, y: 330, width: 160, height: 80 },
+    { id: 'entity-a', title: 'Data Source', x: 120,  y: 180 },
+    { id: 'entity-b', title: 'Processor',   x: 520,  y: 180 },
+    { id: 'entity-c', title: 'Output',      x: 320,  y: 420 },
   ];
 
   configs.forEach(cfg => {
-    const position   = createSignal({ x: cfg.x, y: cfg.y });
-    const dimensions = createSignal({ width: cfg.width, height: cfg.height });
-
+    const posSignal  = createSignal({ x: cfg.x, y: cfg.y });
+    const dimsSignal = createSignal({ width: ENTITY_DEFAULT_WIDTH, height: ENTITY_DEFAULT_HEIGHT });
     const entity = createDemoEntity({
       id:         cfg.id,
       title:      cfg.title,
-      position,
-      dimensions,
+      position:   posSignal,
+      dimensions: dimsSignal,
       workspace,
     });
-
-    const instance: EntityInstance = {
-      id: cfg.id,
-      element: entity.element,
-      position,
-      dimensions,
-      cleanup: entity.cleanup,
-    };
-
-    // Register entity on canvas (appends entity.element to svgContainer)
-    workspace.registerEntity(instance);
-
-    // Edges live in world-space; must be appended AFTER entity so they render above
+    workspace.registerEntity(entity.instance);
     entity.edgeElements.forEach(el => workspace.appendToCanvas(el));
   });
 };

@@ -14,6 +14,7 @@ export interface AnchorProps {
   readonly onConnect?: (linkId: string) => void;
   readonly onDisconnect?: () => void;
   readonly onMouseDown?: (event: MouseEvent) => void;
+  readonly onMouseUp?: (event: MouseEvent) => void;
   readonly onStateChange?: (state: AnchorState) => void;
 }
 

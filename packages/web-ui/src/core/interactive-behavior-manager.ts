@@ -1,42 +1,12 @@
 import { createSignal } from './create-signal.js';
 import type { Signal } from './types/signal.types.js';
+import type { LinkCreationState } from './types/link-creation-state.types.js';
+import type { EntityState } from './types/entity-state.types.js';
+import type { InteractionContext } from './types/interaction-context.types.js';
+import type { BehaviorState } from './types/behavior-state.types.js';
+import type { InteractiveBehaviorManager } from './types/interactive-behavior-manager.types.js';
 
-// Behavior states for coordinating interactions
-export type LinkCreationState = 'idle' | 'drawing' | 'connecting';
-export type EntityState = 'idle' | 'selected' | 'dragging' | 'resizing';
-
-export interface InteractionContext {
-  readonly entityId: string;
-  readonly anchorId?: string;
-  readonly position: { x: number; y: number };
-  readonly event: PointerEvent | MouseEvent;
-}
-
-export interface BehaviorState {
-  readonly linkCreation: LinkCreationState;
-  readonly entity: EntityState;
-  readonly activeEntityId?: string | undefined;
-  readonly sourceAnchorId?: string | undefined;
-  readonly targetPosition?: { x: number; y: number } | undefined;
-}
-
-export interface InteractiveBehaviorManager {
-  readonly behaviorState: Signal<BehaviorState>;
-  readonly startLinkCreation: (context: InteractionContext) => void;
-  readonly updateLinkDrawing: (position: { x: number; y: number }) => void;
-  readonly completeLinkCreation: (targetContext?: InteractionContext) => void;
-  readonly cancelLinkCreation: () => void;
-  readonly selectEntity: (entityId: string) => void;
-  readonly startEntityDrag: (entityId: string, position: { x: number; y: number }) => void;
-  readonly updateEntityDrag: (position: { x: number; y: number }) => void;
-  readonly endEntityDrag: () => void;
-  readonly startEntityResize: (entityId: string, position: { x: number; y: number }) => void;
-  readonly updateEntityResize: (position: { x: number; y: number }) => void;
-  readonly endEntityResize: () => void;
-  readonly cleanup: {
-    readonly destroy: () => void;
-  };
-}
+export type { LinkCreationState, EntityState, InteractionContext, BehaviorState, InteractiveBehaviorManager };
 
 export const createInteractiveBehaviorManager = function(): InteractiveBehaviorManager {
   const cleanupFunctions: Array<() => void> = [];
@@ -66,48 +36,6 @@ export const createInteractiveBehaviorManager = function(): InteractiveBehaviorM
         ...behaviorState.value,
         targetPosition: position
       });
-    }
-  };
-
-  const completeLinkCreation = (targetContext?: InteractionContext) => {
-    const state = behaviorState.value;
-    if (state.linkCreation === 'drawing') {
-      if (targetContext?.anchorId) {
-        // Connect to existing anchor
-        behaviorState.set({
-          ...state,
-          linkCreation: 'connecting'
-        });
-        // Connection logic will be handled by LinkManager
-        setTimeout(() => {
-          behaviorState.set({
-            linkCreation: 'idle',
-            entity: 'idle',
-            activeEntityId: undefined,
-            sourceAnchorId: undefined,
-            targetPosition: undefined
-          });
-        }, 100);
-      } else if (targetContext?.position) {
-        // Create new entity at position
-        behaviorState.set({
-          ...state,
-          linkCreation: 'connecting',
-          targetPosition: targetContext.position
-        });
-        // Entity creation logic will be handled by WorkspaceManager
-        setTimeout(() => {
-          behaviorState.set({
-            linkCreation: 'idle',
-            entity: 'idle',
-            activeEntityId: undefined,
-            sourceAnchorId: undefined,
-            targetPosition: undefined
-          });
-        }, 100);
-      } else {
-        cancelLinkCreation();
-      }
     }
   };
 
@@ -207,7 +135,6 @@ export const createInteractiveBehaviorManager = function(): InteractiveBehaviorM
     behaviorState,
     startLinkCreation,
     updateLinkDrawing,
-    completeLinkCreation,
     cancelLinkCreation,
     selectEntity,
     startEntityDrag,

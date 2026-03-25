@@ -3,7 +3,7 @@ export type { EdgeProps, EdgeResult, EdgeState };
 import { createAnchor } from '../anchor/create-anchor.js';
 import { createSignal } from '../../core/create-signal.js';
 
-const HIT_SIZE = 12;
+const HIT_SIZE = 32;
 
 const applyRect = (el: SVGRectElement, g: { x: number; y: number; width: number; height: number }) => {
   el.setAttribute('x', g.x.toString());
@@ -52,12 +52,13 @@ export const createEdge = function(props: EdgeProps): EdgeResult {
   const pos0  = props.entityPosition.value;
   const dims0 = props.entityDimensions.value;
 
-  // Visual bar — subtle by default, blue on hover
+  // Visual bar — subtle by default, blue+thick on hover
   const bar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
   bar.setAttribute('fill', '#9ca3af');
   bar.setAttribute('opacity', '0.3');
   bar.setAttribute('rx', '1');
   bar.style.pointerEvents = 'none';
+  // CSS transition for color/opacity; thickness is changed via attribute in hover handlers
   bar.style.transition = 'opacity 0.12s ease, fill 0.12s ease';
   applyRect(bar, computeBar(pos0, dims0));
 
@@ -88,11 +89,24 @@ export const createEdge = function(props: EdgeProps): EdgeResult {
   let hovered = false;
   let anchorResult: ReturnType<typeof createAnchor> | undefined;
 
+  const thickHover = (props.thickness + 2) as 5 | 7;
+
   const onHoverEnter = () => {
     if (hovered) return;
     hovered = true;
     bar.setAttribute('fill', '#3b82f6');
     bar.setAttribute('opacity', '0.85');
+    // Grow bar thickness
+    const p = props.entityPosition.value;
+    const d = props.entityDimensions.value;
+    const thick = { ...computeBar(p, d) };
+    // Override the thin dimension with hover thickness
+    const extra = thickHover - props.thickness;
+    if (props.position === 'top' || props.position === 'bottom') thick.height = thickHover;
+    else thick.width = thickHover;
+    if (props.position === 'top')  thick.y -= extra;
+    if (props.position === 'left') thick.x -= extra;
+    applyRect(bar, thick);
     anchorResult?.updateState('hover');
     props.onHover?.(true);
   };
@@ -102,6 +116,8 @@ export const createEdge = function(props: EdgeProps): EdgeResult {
     hovered = false;
     bar.setAttribute('fill', '#9ca3af');
     bar.setAttribute('opacity', '0.3');
+    // Reset bar to normal thickness
+    applyRect(bar, computeBar(props.entityPosition.value, props.entityDimensions.value));
     anchorResult?.updateState('idle');
     props.onHover?.(false);
   };
@@ -131,9 +147,10 @@ export const createEdge = function(props: EdgeProps): EdgeResult {
     position: anchorPos,
     edgePosition: props.position,
     connected: false,
-    radius: 5,
+    radius: 7,
     onConnect: (linkId) => props.onAnchorConnect?.(props.anchorId, linkId),
-    onMouseDown: (event) => props.onAnchorMouseDown?.(event, props.anchorId)
+    onMouseDown: (event) => props.onAnchorMouseDown?.(event, props.anchorId),
+    onMouseUp:   (event) => props.onAnchorMouseUp?.(event, props.anchorId)
   });
 
   // DOM order: bar (bottom visual), anchor (above bar), hit (top — captures hover events)

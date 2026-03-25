@@ -1,0 +1,2 @@
+export const ENTITY_DEFAULT_WIDTH  = 200;
+export const ENTITY_DEFAULT_HEIGHT = 120;

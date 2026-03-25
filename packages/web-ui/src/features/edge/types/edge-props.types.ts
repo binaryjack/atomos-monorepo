@@ -1,7 +1,6 @@
 import type { Signal } from '../../../core/types/signal.types.js';
-
-export type EdgePosition = 'top' | 'bottom' | 'left' | 'right';
-export type EdgeState = 'default' | 'hover' | 'active' | 'connected';
+import type { EdgePosition } from './edge-position.types.js';
+import type { EdgeState } from './edge-state.types.js';
 
 export interface EdgeProps {
   readonly position: EdgePosition;
@@ -16,13 +15,4 @@ export interface EdgeProps {
   readonly onAnchorConnect?: (anchorId: string, linkId: string) => void;
   readonly onAnchorMouseDown?: (event: MouseEvent, anchorId: string) => void;
   readonly onAnchorMouseUp?: (event: MouseEvent, anchorId: string) => void;
-}
-
-export interface EdgeResult {
-  readonly element: SVGGElement;
-  readonly updateState: (state: EdgeState) => void;
-  readonly getAnchorPosition: () => { x: number; y: number };
-  readonly cleanup: {
-    readonly destroy: () => void;
-  };
 }

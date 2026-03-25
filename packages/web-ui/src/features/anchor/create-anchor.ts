@@ -88,19 +88,27 @@ export const createAnchor = function(props: AnchorProps): AnchorResult {
     props.onMouseDown?.(event);
   };
 
-  // Reset dragging state on global mouseup
-  const handleMouseUp = () => {
+  // State reset — fires on any mouseup anywhere
+  const handleGlobalMouseUp = () => {
     if (anchorState.value === 'dragging') {
       anchorState.set('hover');
     }
   };
 
+  // Finalization — fires only when mouse released over THIS circle
+  // This is how the workspace knows to connect to THIS anchor instead of spawning
+  const handleCircleMouseUp = (event: MouseEvent) => {
+    props.onMouseUp?.(event);
+  };
+
   circle.addEventListener('mousedown', handleMouseDown);
-  document.addEventListener('mouseup', handleMouseUp);
+  circle.addEventListener('mouseup', handleCircleMouseUp);
+  document.addEventListener('mouseup', handleGlobalMouseUp);
 
   listeners.push(
-    { target: circle, type: 'mousedown', listener: handleMouseDown as EventListener },
-    { target: document, type: 'mouseup', listener: handleMouseUp }
+    { target: circle,   type: 'mousedown', listener: handleMouseDown     as EventListener },
+    { target: circle,   type: 'mouseup',   listener: handleCircleMouseUp as EventListener },
+    { target: document, type: 'mouseup',   listener: handleGlobalMouseUp as EventListener }
   );
   
   return {
