@@ -13,6 +13,7 @@ import { createIcon } from '../features/icon/create-icon.js';
 import { createWorkspaceManager } from '../core/create-workspace-manager.js';
 import { createInteractiveEntityDemo } from '../features/entity-with-edges/create-interactive-entity-demo.js';
 import { createPreviewSection } from './create-preview-section.js';
+import { createModalDemo } from '../features/modal/create-modal-demo.js';
 
 export const createPreviewPage = function() {
   const container = document.createElement('div');
@@ -383,8 +384,19 @@ export const createPreviewPage = function() {
   main.appendChild(workspaceSection.element);
   cleanupFunctions.push(workspaceSection.cleanup.destroy);
 
+  // ── Modal section ─────────────────────────────────────────────────────────
+  const modalDemo = createModalDemo();
+  cleanupFunctions.push(modalDemo.cleanup.destroy);
+
+  const modalSection = createPreviewSection({
+    title: 'Modal',
+    children: [modalDemo.element],
+  });
+  main.appendChild(modalSection.element);
+  cleanupFunctions.push(modalSection.cleanup.destroy);
+
   container.appendChild(main);
-  
+
   return {
     element: container,
     cleanup: {
