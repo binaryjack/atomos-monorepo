@@ -1,6 +1,11 @@
 import './index.js';
+import '../formular/index.js';
+import { createForm, f, newEvent, EventsEnum } from '@binaryjack/formular.dev';
+import type { IFormular, IObjectShape } from '@binaryjack/formular.dev';
 import type { VbsModal } from './vbs-modal.js';
 import type { ModalResult } from './types/modal-result.types.js';
+import { createFormularInput } from '../formular/atoms/create-formular-input.js';
+import { createFormularTextarea } from '../formular/atoms/create-formular-textarea.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -102,55 +107,81 @@ const buildFormModal = (): VbsModal => {
   header.textContent = 'Edit Entity';
   header.setAttribute('slot', 'header');
 
-  // Body: a small form
   const body = document.createElement('div');
-  body.style.display = 'flex';
-  body.style.flexDirection = 'column';
-  body.style.gap = '16px';
+  body.style.cssText = 'display:flex;flex-direction:column;gap:16px;';
 
-  const field = (labelText: string, placeholder: string): HTMLDivElement => {
-    const wrap = document.createElement('div');
-    const lbl = document.createElement('label');
-    lbl.textContent = labelText;
-    lbl.style.cssText = 'display:block;font-size:12px;font-weight:500;color:#94a3b8;margin-bottom:6px;';
-
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.placeholder = placeholder;
-    inp.style.cssText = [
-      'width:100%',
-      'box-sizing:border-box',
-      'background:#0f172a',
-      'border:1px solid #334155',
-      'border-radius:6px',
-      'padding:8px 12px',
-      'color:#f1f5f9',
-      'font-size:14px',
-      'font-family:system-ui,sans-serif',
-      'outline:none',
-      'transition:border-color 150ms',
-    ].join(';');
-    inp.addEventListener('focus', () => { inp.style.borderColor = '#3b82f6'; });
-    inp.addEventListener('blur',  () => { inp.style.borderColor = '#334155'; });
-
-    wrap.appendChild(lbl);
-    wrap.appendChild(inp);
-    return wrap;
-  };
-
-  body.appendChild(field('Entity Name', 'e.g. User'));
-  body.appendChild(field('Code',        'e.g. USR'));
-  body.appendChild(field('Description', 'Optional description…'));
+  // Save action ref — wired once form resolves
+  let doSave: (() => void) | null = null;
+  let doReset: (() => void) | null = null;
 
   const footer = document.createElement('vbs-modal-footer');
   footer.setAttribute('slot', 'footer');
-  footer.appendChild(btn('Cancel', 'ghost',   () => modal.close()));
-  footer.appendChild(btn('Save',   'primary', () => modal.close({ saved: true })));
+  footer.appendChild(btn('Cancel', 'ghost', () => { doReset?.(); modal.close(); }));
+  footer.appendChild(btn('Save', 'primary', () => { doSave?.(); }));
 
   modal.appendChild(header);
   modal.appendChild(body);
   modal.appendChild(footer);
   appendModal(modal);
+
+  // ── Async form setup ────────────────────────────────────────────────────────
+  (async () => {
+    const form = await createForm({
+      schema: f.object({
+        name:        f.string().min(1, 'Name is required'),
+        code:        f.string().min(1, 'Code is required'),
+        description: f.string(),
+      }),
+      defaultValues: { name: '', code: '', description: '' },
+    }) as unknown as IFormular<IObjectShape>;
+
+    const nameField = createFormularInput({
+      fieldName: 'name', form, label: 'Entity name', placeholder: 'e.g. User', type: 'text',
+      guide: 'Enter a unique display name for this entity.',
+    });
+    const codeField = createFormularInput({
+      fieldName: 'code', form, label: 'Code', placeholder: 'e.g. USR', type: 'text',
+      guide: 'Short uppercase identifier, e.g. USR or PROD.',
+    });
+    const descField = createFormularTextarea({
+      fieldName: 'description', form, label: 'Description', placeholder: 'Optional description…', rows: 3,
+      guide: 'Optional — brief description of what this entity represents.',
+    });
+
+    body.appendChild(nameField.element);
+    body.appendChild(codeField.element);
+    body.appendChild(descField.element);
+
+    doReset = () => form.reset();
+
+    doSave = async () => {
+      const fieldNames = ['name', 'code', 'description'] as const;
+      for (const fn of fieldNames) {
+        const fld = form.getField(fn);
+        if (fld) {
+          await (fld.input as unknown as { handleValidationAsync: (e: unknown) => Promise<unknown[]> })
+            .handleValidationAsync(newEvent(fn, 'vbs', EventsEnum.onSubmit, 'submit', fn, fld));
+        }
+      }
+      nameField.refresh();
+      codeField.refresh();
+      descField.refresh();
+      const hasErrors = (['name', 'code', 'description'] as const).some(fn => {
+        const fld = form.getField(fn);
+        if (!fld) return false;
+        const results = (fld.input as unknown as { validationResults?: { state: boolean }[] }).validationResults ?? [];
+        return results.some(r => !r.state);
+      });
+      if (hasErrors) return;
+      modal.close({
+        name:        String(form.getField('name')?.input?.value  ?? ''),
+        code:        String(form.getField('code')?.input?.value  ?? ''),
+        description: String(form.getField('description')?.input?.value ?? ''),
+      });
+      form.reset();
+    };
+  })().catch(console.error);
+
   return modal;
 };
 

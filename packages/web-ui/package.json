@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@vbs/vbs-style": "workspace:*",
-    "@vbs/vbs-mod": "workspace:*"
+    "@vbs/vbs-mod": "workspace:*",
+    "@binaryjack/formular.dev": "^1.0.57"
   },
   "devDependencies": {
     "typescript": "^5.3.0",

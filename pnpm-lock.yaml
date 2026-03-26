@@ -97,6 +97,9 @@ importers:
 
   packages/web-ui:
     dependencies:
+      '@binaryjack/formular.dev':
+        specifier: ^1.0.57
+        version: 1.0.57
       '@vbs/vbs-mod':
         specifier: workspace:*
         version: link:../vbs-mod
