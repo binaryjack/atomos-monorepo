@@ -19,7 +19,7 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
 
   // --- HTML content inside foreignObject ---
   const content = createEntityContent({
-    entitySignal: props.entitySignal,
+    entityStore: props.entityStore,
     globalConfig:  props.globalConfig,
     storageProvider: props.storageProvider,
     onDelete: () => props.workspace.unregisterEntity(props.id),

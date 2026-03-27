@@ -1,0 +1,220 @@
+import type { ReduxState, ReduxAction, ReduxStore, SchemaModel } from '../types/redux-state.types.js';
+import type { Entity, LinkProps, RenderType, Cardinality } from '@vbs/vbs-mod';
+
+const initial_state: ReduxState = {
+  schemas: {},
+  active_schema_id: 'schema-default',
+  canvas_viewport: { pan: { x: 0, y: 0 }, zoom: 1 }
+};
+
+const reduce_state = function(state: ReduxState, action: ReduxAction): ReduxState {
+  console.log('🏪 Redux action:', action.type, action);
+  
+  switch (action.type) {
+    case 'entity-moved': {
+      const schema = state.schemas[action.schema_id];
+      if (!schema) return state;
+      
+      const entities = schema.entities.map(e =>
+        e.id === action.entity_id 
+          ? { ...e, position: { x: action.x, y: action.y } }
+          : e
+      );
+      
+      return {
+        ...state,
+        schemas: {
+          ...state.schemas,
+          [action.schema_id]: { ...schema, entities }
+        }
+      };
+    }
+    
+    case 'entity-resized': {
+      const schema = state.schemas[action.schema_id];
+      if (!schema) return state;
+      
+      const entities = schema.entities.map(e =>
+        e.id === action.entity_id 
+          ? { ...e, dimensions: { width: action.width, height: action.height } }
+          : e
+      );
+      
+      return {
+        ...state,
+        schemas: {
+          ...state.schemas,
+          [action.schema_id]: { ...schema, entities }
+        }
+      };
+    }
+    
+    case 'entity-updated': {
+      const schema = state.schemas[action.schema_id];
+      if (!schema) return state;
+      
+      const entities = schema.entities.map(e =>
+        e.id === action.entity.id ? action.entity : e
+      );
+      
+      return {
+        ...state,
+        schemas: {
+          ...state.schemas,
+          [action.schema_id]: { ...schema, entities }
+        }
+      };
+    }
+    
+    case 'entity-added': {
+      const schema = state.schemas[action.schema_id] || {
+        id: action.schema_id,
+        name: 'Default Schema',
+        entities: [],
+        links: []
+      };
+      
+      const entities = [...schema.entities, action.entity];
+      
+      return {
+        ...state,
+        schemas: {
+          ...state.schemas,
+          [action.schema_id]: { ...schema, entities }
+        }
+      };
+    }
+    
+    case 'entity-removed': {
+      const schema = state.schemas[action.schema_id];
+      if (!schema) return state;
+      
+      const entities = schema.entities.filter(e => e.id !== action.entity_id);
+      const links = schema.links.filter(l => 
+        l.leftEntityId !== action.entity_id && l.rightEntityId !== action.entity_id
+      );
+      
+      return {
+        ...state,
+        schemas: {
+          ...state.schemas,
+          [action.schema_id]: { ...schema, entities, links }
+        }
+      };
+    }
+    
+    case 'link-created': {
+      const schema = state.schemas[action.schema_id] || {
+        id: action.schema_id,
+        name: 'Default Schema',
+        entities: [],
+        links: []
+      };
+      
+      const link: LinkProps = {
+        id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        leftEntityId: action.from_id,
+        rightEntityId: action.to_id,
+        leftAnchorId: action.from_anchor || 'center',
+        rightAnchorId: action.to_anchor || 'center',
+        leftCardinality: '1' as Cardinality,
+        rightCardinality: '1' as Cardinality,
+        renderType: 'linear' as RenderType
+      };
+      
+      const links = [...schema.links, link];
+      
+      return {
+        ...state,
+        schemas: {
+          ...state.schemas,
+          [action.schema_id]: { ...schema, links }
+        }
+      };
+    }
+    
+    case 'link-removed': {
+      const schema = state.schemas[action.schema_id];
+      if (!schema) return state;
+      
+      const links = schema.links.filter(l => l.id !== action.link_id);
+      
+      return {
+        ...state,
+        schemas: {
+          ...state.schemas,
+          [action.schema_id]: { ...schema, links }
+        }
+      };
+    }
+    
+    case 'viewport-updated': {
+      return {
+        ...state,
+        canvas_viewport: action.viewport
+      };
+    }
+    
+    case 'state-loaded': {
+      return action.state;
+    }
+    
+    default:
+      return state;
+  }
+};
+
+export const create_redux_store = function(): ReduxStore {
+  let current_state = initial_state;
+  const listeners = new Set<(state: ReduxState) => void>();
+
+  const persist = function(): void {
+    try {
+      const serialized = JSON.stringify(current_state);
+      localStorage.setItem('vbe2:redux-state', serialized);
+      console.log('💾 Redux state persisted:', current_state);
+    } catch (error) {
+      console.error('❌ Failed to persist Redux state:', error);
+    }
+  };
+
+  const load = function(): void {
+    try {
+      const raw = localStorage.getItem('vbe2:redux-state');
+      if (raw) {
+        const loaded_state = JSON.parse(raw) as ReduxState;
+        current_state = loaded_state;
+        console.log('📂 Redux state loaded:', current_state);
+      } else {
+        console.log('📝 No persisted Redux state found, using defaults');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load Redux state:', error);
+      current_state = initial_state;
+    }
+  };
+
+  const get_state = function(): ReduxState {
+    return current_state;
+  };
+
+  const dispatch = function(action: ReduxAction): void {
+    const previous_state = current_state;
+    current_state = reduce_state(current_state, action);
+    
+    if (current_state !== previous_state) {
+      persist();
+      listeners.forEach(listener => listener(current_state));
+    }
+  };
+
+  const subscribe = function(listener: (state: ReduxState) => void): () => void {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  };
+
+  // Load initial state
+  load();
+  
+  return { get_state, dispatch, subscribe };
+};

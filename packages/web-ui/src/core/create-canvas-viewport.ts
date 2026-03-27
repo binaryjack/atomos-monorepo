@@ -1,5 +1,6 @@
 import { createSignal } from './create-signal.js';
 import type { Signal } from './types/signal.types.js';
+import { createLocalStoragePersistence, readLocalStorage } from './create-local-storage-persistence.js';
 
 export const CANVAS_SIZE = 4000;
 export const ZOOM_MIN = 0.1;
@@ -27,7 +28,15 @@ export interface CanvasViewport {
 export const createCanvasViewport = function(container: HTMLElement, svgElement?: SVGSVGElement): CanvasViewport {
   const cleanups: Array<() => void> = [];
 
-  const state = createSignal<ViewportState>({ pan: { x: 0, y: 0 }, zoom: 1 });
+  // Load saved viewport state from localStorage
+  const savedState = readLocalStorage<ViewportState>('vbe2:canvas-viewport');
+  const initialState: ViewportState = savedState ?? { pan: { x: 0, y: 0 }, zoom: 1 };
+  
+  const state = createSignal<ViewportState>(initialState);
+  
+  // Persist viewport changes
+  const persistence = createLocalStoragePersistence('vbe2:canvas-viewport', state);
+  cleanups.push(persistence.destroy);
 
   const transform = (): string => {
     const { pan, zoom } = state.value;

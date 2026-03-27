@@ -40,6 +40,8 @@ export interface WorkspaceManager {
   readonly registerEntity: (entity: EntityInstance) => void;
   readonly unregisterEntity: (entityId: string) => void;
   readonly screenToSvgCoords: (clientX: number, clientY: number) => { x: number; y: number };
+  readonly onLinkCreated?: (link: { id: string; sourceAnchorId: string; targetAnchorId: string; leftEntityId: string; rightEntityId: string }) => void;
+  readonly onEntityDeleted?: (entityId: string) => void;
   /**
    * Called by an anchor's mousedown. Begins the draw-link flow.
    * srcEdge = which side of the entity the anchor lives on.
@@ -183,6 +185,10 @@ export const createWorkspaceManager = function(
     // Don't connect to the same anchor
     if (dstAnchorId === activeTempSrcAnchorId) { clearTempLink(); return; }
 
+    // Capture source entity ID early for link creation notification
+    const srcEntityId = activeTempSrcEntityId ?? '';
+    const srcEdge     = activeTempSrcEdge!;
+
     const linkId = `link-${activeTempSrcAnchorId}-${dstAnchorId}-${Date.now()}`;
     const permanentLink = linkManager.createLink({
       id: linkId,
@@ -198,9 +204,29 @@ export const createWorkspaceManager = function(
 
     contentRoot.appendChild(permanentLink.element);
 
+    // Notify schema store about new link for persistence
+    console.log('[WORKSPACE-MANAGER] Link created, checking for onLinkCreated callback...');
+    if (manager.onLinkCreated) {
+      console.log('[WORKSPACE-MANAGER] ✓ Calling onLinkCreated callback with:', {
+        id: linkId,
+        sourceAnchorId: activeTempSrcAnchorId,
+        targetAnchorId: dstAnchorId,
+        leftEntityId: srcEntityId,
+        rightEntityId: dstEntityId,
+      });
+      
+      manager.onLinkCreated({
+        id: linkId,
+        sourceAnchorId: activeTempSrcAnchorId,
+        targetAnchorId: dstAnchorId,
+        leftEntityId: srcEntityId,
+        rightEntityId: dstEntityId,
+      });
+    } else {
+      console.error('[WORKSPACE-MANAGER] ✗ No onLinkCreated callback set! Link will not be persisted!');
+    }
+
     // Subscribe to entity signals so link path updates when entities move or resize
-    const srcEntityId = activeTempSrcEntityId ?? '';
-    const srcEdge     = activeTempSrcEdge!;
     const srcEntity   = workspaceState.value.entities.get(srcEntityId);
     const dstEntity   = workspaceState.value.entities.get(dstEntityId);
     if (srcEntity && dstEntity) {
@@ -363,6 +389,11 @@ export const createWorkspaceManager = function(
         ? undefined
         : workspaceState.value.selectedEntityId
     });
+
+    // Notify schema store about entity deletion for persistence
+    if (manager.onEntityDeleted) {
+      manager.onEntityDeleted(entityId);
+    }
   };
 
   svgContainer.addEventListener('mousemove', handleCanvasMouseMove);

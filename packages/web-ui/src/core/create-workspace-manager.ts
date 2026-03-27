@@ -17,7 +17,11 @@ export const createWorkspaceManager = function(
   const linkManager      = createLinkManager();
   const transformer      = createCoordinateTransformer(svgContainer, contentRoot);
   const registry         = createEntityRegistry(contentRoot);
-  const linkFinalizer    = createLinkFinalizer(linkManager, registry.workspaceState, contentRoot);
+  const linkFinalizer    = createLinkFinalizer(linkManager, registry.workspaceState, contentRoot, (link) => {
+    // Forward to workspace manager's onLinkCreated callback if set
+    console.log('[WORKSPACE-MANAGER] Link created via finalizer:', link);
+    (manager as any).onLinkCreated?.(link);
+  });
   const linkDrawCtrl     = createLinkDrawController(linkManager, behaviorManager, contentRoot, linkFinalizer);
 
   let spawnFactory: EntitySpawnFactory | undefined;

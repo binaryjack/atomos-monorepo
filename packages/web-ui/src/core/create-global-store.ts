@@ -5,7 +5,7 @@ import { GLOBAL_KEY } from './registry-keys.js';
 import { DEFAULT_GLOBAL_CONFIG } from './types/global-config.types.js';
 import { createLocalStoragePersistence, readLocalStorage } from './create-local-storage-persistence.js';
 
-const LS_KEY = 'vbe2-global';
+const LS_KEY = 'vbe2:global';
 
 export interface GlobalStore {
   readonly signal: Signal<GlobalConfig>;

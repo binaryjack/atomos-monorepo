@@ -4,10 +4,11 @@ import type { GlobalConfig } from '../../../core/types/global-config.types.js';
 import type { WorkspaceManager } from '../../../core/types/workspace-manager.types.js';
 import type { EntityInstance } from '../../../core/types/entity-instance.types.js';
 import type { IStorageProvider } from '../../../core/storage/types/storage-provider.types.js';
+import type { EntityStore } from '../../../core/create-entity-store.js';
 
 export interface DemoEntityProps {
   readonly id: string;
-  readonly entitySignal: Signal<Entity>;
+  readonly entityStore: EntityStore;
   readonly globalConfig: Signal<GlobalConfig>;
   readonly position: Signal<{ x: number; y: number }>;
   readonly dimensions: Signal<{ width: number; height: number }>;

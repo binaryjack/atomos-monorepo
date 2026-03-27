@@ -3,7 +3,7 @@ import type { Entity, Property, DataType } from '@vbs/vbs-mod';
 import type { GlobalConfig } from '../../core/types/global-config.types.js';
 import type { IStorageProvider } from '../../core/storage/types/storage-provider.types.js';
 import { createSignal } from '../../core/create-signal.js';
-import { createEntityStore } from '../../core/create-entity-store.js';
+import type { EntityStore } from '../../core/create-entity-store.js';
 import { createEntityHeader } from './create-entity-header.js';
 import { createEntityPropertyRow } from './create-entity-property-row.js';
 import { createEntityFooter } from './create-entity-footer.js';
@@ -16,7 +16,7 @@ const ROW_H    = 30;
 const MIN_BODY_ROWS = 2;
 
 export interface EntityContentProps {
-  readonly entitySignal: Signal<Entity>;
+  readonly entityStore: EntityStore;
   readonly globalConfig: Signal<GlobalConfig>;
   readonly storageProvider: IStorageProvider<Entity>;
   readonly onDelete: (entityId: string) => void;
@@ -34,8 +34,8 @@ export interface EntityContentResult {
 
 export const createEntityContent = function(props: EntityContentProps): EntityContentResult {
   const cleanups: Array<() => void> = [];
-  const store = createEntityStore(props.entitySignal.value);
-  const entitySettingsModal = createEntitySettingsModal(props.entitySignal.value.id);
+  const store = props.entityStore; // Use the store passed in, don't create a new one!
+  const entitySettingsModal = createEntitySettingsModal(props.entityStore.signal.value.id);
 
   // ─── foreignObject shell ───────────────────────────────────────────────────
   const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
@@ -61,7 +61,7 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
   fo.appendChild(body);
 
   // ─── header ───────────────────────────────────────────────────────────────
-  const labelSignal = createSignal(props.entitySignal.value.name);
+  const labelSignal = createSignal(store.signal.value.name);
 
   const header = createEntityHeader({
     label: labelSignal,
@@ -69,10 +69,10 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
       store.updateLabel(v);
     },
     onSettingsClick: () => {
-      props.onSettingsClick(props.entitySignal.value.id);
+      props.onSettingsClick(store.signal.value.id);
       entitySettingsModal.open().catch(console.error);
     },
-    onDeleteClick:   () => props.onDelete(props.entitySignal.value.id),
+    onDeleteClick:   () => props.onDelete(store.signal.value.id),
   });
   cleanups.push(header.cleanup.destroy);
   body.appendChild(header.element);
@@ -146,7 +146,7 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
   };
 
   // Initial render
-  renderRows(props.entitySignal.value);
+  renderRows(store.signal.value);
 
   // Re-render on store change
   const unsubStore = store.signal.subscribe((entity) => renderRows(entity));

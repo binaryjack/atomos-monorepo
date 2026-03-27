@@ -142,7 +142,8 @@ const moveLinkLabelFO = (
 export const createLinkFinalizer = function(
   linkManager: LinkManager,
   workspaceState: Signal<WorkspaceState>,
-  contentRoot: SVGElement
+  contentRoot: SVGElement,
+  onLinkCreated?: (link: { id: string; sourceAnchorId: string; targetAnchorId: string; leftEntityId: string; rightEntityId: string }) => void
 ): LinkFinalizer {
   const linkSubscriptions = new Map<string, Array<() => void>>();
   const linkEntityMap     = new Map<string, { srcEntityId: string; dstEntityId: string }>();
@@ -168,6 +169,11 @@ export const createLinkFinalizer = function(
     srcEdge: EdgePosition,
     srcPos: { x: number; y: number }
   ): void => {
+    console.log('[LINK-FINALIZER] finalizeLinkToAnchor called:', {
+      src: `${srcEntityId}:${srcAnchorId}`,
+      dst: `${dstEntityId}:${dstAnchorId}`
+    });
+    
     const linkId = `link-${srcAnchorId}-${dstAnchorId}-${Date.now()}`;
 
     const permanentLink = linkManager.createLink({
@@ -219,6 +225,20 @@ export const createLinkFinalizer = function(
       ?.notifyAnchorConnected?.(srcAnchorId, linkId);
     workspaceState.value.entities.get(dstEntityId)
       ?.notifyAnchorConnected?.(dstAnchorId, linkId);
+
+    // Notify callback about link creation for persistence
+    if (onLinkCreated) {
+      console.log('[LINK-FINALIZER] ✓ Calling onLinkCreated callback');
+      onLinkCreated({
+        id: linkId,
+        sourceAnchorId: srcAnchorId,
+        targetAnchorId: dstAnchorId,
+        leftEntityId: srcEntityId,
+        rightEntityId: dstEntityId
+      });
+    } else {
+      console.error('[LINK-FINALIZER] ✗ No onLinkCreated callback! Link will not be persisted!');
+    }
   };
 
   const removeLinksForEntity = (entityId: string): void => {

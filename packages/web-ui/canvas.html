@@ -29,6 +29,7 @@
   <script type="module">
     import { createCanvasPage } from './dist/preview/create-canvas-page.js';
 
+    console.log('🚀 Starting original canvas with Redux persistence');
     const page = createCanvasPage();
     document.getElementById('canvas-root').appendChild(page.element);
 
