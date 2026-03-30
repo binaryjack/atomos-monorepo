@@ -1,4 +1,5 @@
-import { CanvasState, StoreAction, Store } from '../types/store.types.js';
+import '../core/redux-devtools.types.js';
+import type { CanvasState, Store, StoreAction } from '../types/store.types.js';
 
 export const createStore = function(): Store {
   const initialState: CanvasState = {
@@ -10,6 +11,20 @@ export const createStore = function(): Store {
 
   let state = initialState;
   const listeners: Array<(state: CanvasState) => void> = [];
+
+  // Redux DevTools setup
+  const devTools = typeof window !== 'undefined' && window.__REDUX_DEVTOOLS_EXTENSION__ 
+    ? window.__REDUX_DEVTOOLS_EXTENSION__.connect({ 
+        name: 'VBS Canvas Store',
+        trace: true,
+        traceLimit: 25
+      })
+    : null;
+
+  if (devTools) {
+    devTools.init(initialState);
+    console.log('🔧 Redux DevTools connected to Canvas Store');
+  }
 
   const reducer = function(currentState: CanvasState, action: StoreAction): CanvasState {
     console.log('Store reducer:', action.type, 'payload' in action ? action.payload : 'no payload');
@@ -117,6 +132,12 @@ export const createStore = function(): Store {
     
     if (state !== previousState) {
       console.log('State changed:', { previous: previousState, current: state });
+      
+      // Send to Redux DevTools
+      if (devTools) {
+        devTools.send(action, state);
+      }
+      
       listeners.forEach(listener => listener(state));
     }
   };

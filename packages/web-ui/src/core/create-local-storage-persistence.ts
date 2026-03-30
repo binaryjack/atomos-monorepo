@@ -59,21 +59,60 @@ export const createLocalStoragePersistence = function<T>(
 };
 
 /**
- * Handle localStorage quota exceeded by clearing old data
+ * Handle localStorage quota exceeded by aggressively clearing old/redundant data
  */
 const handleQuotaExceeded = (currentKey: string): void => {
+  console.warn(`⚠️ localStorage quota exceeded for ${currentKey} - performing cleanup...`);
+  
   try {
-    // Clear non-essential keys first
-    const nonEssentialPrefixes = ['debug-', 'temp-', 'cache-'];
+    // Phase 1: Clear non-essential keys first
+    const nonEssentialPrefixes = ['debug-', 'temp-', 'cache-', 'redux-', 'devtools-'];
+    let clearedCount = 0;
+    
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
       if (key && key !== currentKey && nonEssentialPrefixes.some(prefix => key.startsWith(prefix))) {
         localStorage.removeItem(key);
-        console.log(`[persistence] Cleared non-essential key: ${key}`);
+        clearedCount++;
+        console.log(`🧹 Cleared non-essential key: ${key}`);
       }
     }
+    
+    // Phase 2: If still not enough space, clear older VBE2 backup keys
+    if (clearedCount < 3) {
+      const vbe2Keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('vbe2:') && key !== currentKey) {
+          vbe2Keys.push({ key, size: localStorage.getItem(key)?.length || 0 });
+        }
+      }
+      
+      // Sort by size (largest first) and remove biggest non-current keys
+      vbe2Keys.sort((a, b) => b.size - a.size);
+      const keysToRemove = vbe2Keys.slice(0, Math.min(2, vbe2Keys.length));
+      
+      keysToRemove.forEach(({ key, size }) => {
+        localStorage.removeItem(key);
+        console.log(`🧹 Cleared large VBE2 key: ${key} (${Math.round(size / 1024)}KB)`);
+      });
+    }
+    
+    // Phase 3: Last resort - clear ALL non-vbe2 keys (except current)
+    if (clearedCount === 0) {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && !key.startsWith('vbe2:')) {
+          localStorage.removeItem(key);
+          console.log(`🧹 Last resort cleanup: ${key}`);
+        }
+      }
+    }
+    
+    console.log(`✅ localStorage cleanup completed - freed space for ${currentKey}`);
+    
   } catch (cleanupErr) {
-    console.error('[persistence] Cleanup failed:', cleanupErr);
+    console.error('❌ localStorage cleanup failed:', cleanupErr);
   }
 };
 

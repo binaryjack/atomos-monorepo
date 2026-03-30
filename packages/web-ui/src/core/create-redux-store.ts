@@ -1,5 +1,5 @@
-import type { ReduxState, ReduxAction, ReduxStore, SchemaModel } from '../types/redux-state.types.js';
-import type { Entity, LinkProps, RenderType, Cardinality } from '@vbs/vbs-mod';
+import type { Cardinality, LinkProps, RenderType } from '@vbs/vbs-mod';
+import type { ReduxAction, ReduxState, ReduxStore } from '../types/redux-state.types.js';
 
 const initial_state: ReduxState = {
   schemas: {},
@@ -187,12 +187,36 @@ export const create_redux_store = function(): ReduxStore {
   const listeners = new Set<(state: ReduxState) => void>();
 
   const persist = function(): void {
+    const serialized = JSON.stringify(current_state);
     try {
-      const serialized = JSON.stringify(current_state);
       localStorage.setItem('vbe2:redux-state', serialized);
       console.log('💾 Redux state persisted:', current_state);
     } catch (error) {
-      console.error('❌ Failed to persist Redux state:', error);
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        console.warn('⚠️ localStorage quota exceeded - cleaning up old data...');
+        // Clear old persistence data to make room
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key?.startsWith('vbe2:') && key !== 'vbe2:redux-state') {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+          console.log(`🧹 Removed ${key} to free localStorage space`);
+        });
+        
+        // Try persisting again after cleanup
+        try {
+          localStorage.setItem('vbe2:redux-state', serialized);
+          console.log('💾 Redux state persisted after cleanup');
+        } catch (retryError) {
+          console.error('❌ Still failed to persist after cleanup - state too large:', retryError);
+        }
+      } else {
+        console.error('❌ Failed to persist Redux state:', error);
+      }
     }
   };
 

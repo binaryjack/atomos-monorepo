@@ -1,10 +1,18 @@
-﻿import { createSignal } from './create-signal.js';
-import { createInteractiveBehaviorManager } from './interactive-behavior-manager.js';
-import { createLinkManager } from './link-manager.js';
-import type { InteractiveBehaviorManager } from './interactive-behavior-manager.js';
-import type { LinkManager } from './link-manager.js';
-import type { Signal } from './types/signal.types.js';
+﻿/**
+ * @deprecated This implementation is incomplete and should not be used.
+ * Use create-workspace-manager.ts instead which has proper:
+ * - restoreLink method with isRestoration flag to prevent infinite loops
+ * - Link finalizer integration for Command-Query Separation
+ * - Clean architecture compatibility
+ */
+
 import type { EdgePosition } from '../features/edge/types/edge.types.js';
+import { createSignal } from './create-signal.js';
+import type { InteractiveBehaviorManager } from './interactive-behavior-manager.js';
+import { createInteractiveBehaviorManager } from './interactive-behavior-manager.js';
+import type { LinkManager } from './link-manager.js';
+import { createLinkManager } from './link-manager.js';
+import type { Signal } from './types/signal.types.js';
 
 export const ENTITY_DEFAULT_WIDTH  = 200;
 export const ENTITY_DEFAULT_HEIGHT = 120;

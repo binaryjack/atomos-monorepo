@@ -1,15 +1,15 @@
-import type { Signal } from '../../core/types/signal.types.js';
-import type { Entity, Property, DataType } from '@vbs/vbs-mod';
-import type { GlobalConfig } from '../../core/types/global-config.types.js';
-import type { IStorageProvider } from '../../core/storage/types/storage-provider.types.js';
-import { createSignal } from '../../core/create-signal.js';
+import type { DataType, Entity } from '@vbs/vbs-mod';
+import { createLegacyPropertyRepositoryBridge } from '../../core/adapters/legacy-property-bridge.js';
 import type { EntityStore } from '../../core/create-entity-store.js';
-import { createEntityHeader } from './create-entity-header.js';
-import { createEntityPropertyRow } from './create-entity-property-row.js';
-import { createEntityFooter } from './create-entity-footer.js';
+import { createSignal } from '../../core/create-signal.js';
+import type { IStorageProvider } from '../../core/storage/types/storage-provider.types.js';
+import type { GlobalConfig } from '../../core/types/global-config.types.js';
+import type { Signal } from '../../core/types/signal.types.js';
 import { createEntitySettingsModal } from '../modal/create-entity-settings-modal.js';
 import { createPropertySettingsModal } from '../modal/create-property-settings-modal.js';
-import { createPropertyRepository } from '../../core/repository/create-property-repository.js';
+import { createEntityFooter } from './create-entity-footer.js';
+import { createEntityHeader } from './create-entity-header.js';
+import { createEntityPropertyRow } from './create-entity-property-row.js';
 
 const HEADER_H = 36;
 const FOOTER_H = 30;
@@ -131,8 +131,8 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
           propModal.open().catch(console.error);
         },
         onDeleteClick: async () => {
-          console.log(`[ENTITY-CONTENT] Deleting property ${prop.key} via repository...`);
-          const repository = createPropertyRepository({
+          console.log(`[ENTITY-CONTENT] Deleting property ${prop.key} via clean architecture bridge...`);
+          const repository = createLegacyPropertyRepositoryBridge({
             entityId: store.signal.value.id,
             entitySignal: store.signal,
             storageProvider: props.storageProvider
@@ -170,8 +170,8 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
   // ─── footer ───────────────────────────────────────────────────────────────
   const footer = createEntityFooter({
     onAddProperty: async () => {
-      console.log('[ENTITY-CONTENT] Adding new property via repository...');
-      const repository = createPropertyRepository({
+      console.log('[ENTITY-CONTENT] Adding new property via clean architecture bridge...');
+      const repository = createLegacyPropertyRepositoryBridge({
         entityId: store.signal.value.id,
         entitySignal: store.signal,
         storageProvider: props.storageProvider

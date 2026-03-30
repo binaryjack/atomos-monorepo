@@ -1,9 +1,9 @@
+import type { EdgePosition } from '../features/edge/types/edge-position.types.js';
+import { openLinkSettingsModal } from '../features/modal/create-link-settings-modal.js';
+import { bezierMidpoint } from './bezier.js';
+import type { LinkManager } from './types/link-manager.types.js';
 import type { Signal } from './types/signal.types.js';
 import type { WorkspaceState } from './types/workspace-state.types.js';
-import type { LinkManager } from './types/link-manager.types.js';
-import type { EdgePosition } from '../features/edge/types/edge-position.types.js';
-import { bezierMidpoint } from './bezier.js';
-import { openLinkSettingsModal } from '../features/modal/create-link-settings-modal.js';
 
 export interface LinkFinalizer {
   readonly finalizeLinkToAnchor: (
@@ -14,7 +14,8 @@ export interface LinkFinalizer {
     srcAnchorId: string,
     srcEntityId: string,
     srcEdge: EdgePosition,
-    srcPos: { x: number; y: number }
+    srcPos: { x: number; y: number },
+    isRestoration?: boolean
   ) => void;
   readonly removeLinksForEntity: (entityId: string) => void;
   readonly removeLinkById: (linkId: string) => void;

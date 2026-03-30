@@ -1,8 +1,8 @@
-import { createStore, createPersistence, EntityState, LinkState } from '../redux-store.js';
 import { createCanvasViewport } from '../core/create-canvas-viewport.js';
 import { createWorkspaceManager } from '../core/create-workspace-manager.js';
 import { createInteractiveEntityDemo } from '../features/entity-with-edges/create-interactive-entity-demo.js';
-import type { Entity } from '@vbs/vbs-mod';
+import type { EntityState } from '../redux-store.js';
+import { createPersistence, createStore } from '../redux-store.js';
 
 export const createReduxCanvasPage = function() {
   const cleanups: Array<() => void> = [];

@@ -1,12 +1,12 @@
-import { createInteractiveBehaviorManager } from './interactive-behavior-manager.js';
-import { createLinkManager } from './link-manager.js';
+import { createCanvasEventHandler } from './create-canvas-event-handler.js';
 import { createCoordinateTransformer } from './create-coordinate-transformer.js';
 import { createEntityRegistry } from './create-entity-registry.js';
 import { createLinkDrawController } from './create-link-draw-controller.js';
 import { createLinkFinalizer } from './create-link-finalizer.js';
-import { createCanvasEventHandler } from './create-canvas-event-handler.js';
-import type { WorkspaceManager } from './types/workspace-manager.types.js';
+import { createInteractiveBehaviorManager } from './interactive-behavior-manager.js';
+import { createLinkManager } from './link-manager.js';
 import type { EntitySpawnFactory } from './types/entity-spawn-factory.types.js';
+import type { WorkspaceManager } from './types/workspace-manager.types.js';
 import type { WorkspaceState } from './types/workspace-state.types.js';
 
 export const createWorkspaceManager = function(
@@ -90,11 +90,12 @@ export const createWorkspaceManager = function(
     appendToCanvas:        (element) => { contentRoot.appendChild(element); },
 
     restoreLink: (srcAnchorId, srcPos, srcEntityId, srcEdge, dstAnchorId, dstPos, dstEntityId, dstEdge) => {
-      // Restore a persisted link using the internal link finalizer with restoration flag
+      // Restore a persisted link using the internal link finalizer
+      // Pass isRestoration=true to prevent triggering persistence callbacks
       linkFinalizer.finalizeLinkToAnchor(
         dstAnchorId, dstPos, dstEntityId, dstEdge,
         srcAnchorId, srcEntityId, srcEdge, srcPos,
-        true // isRestoration = true to prevent persistence callback
+        true  // isRestoration flag
       );
     },
 

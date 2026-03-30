@@ -19,7 +19,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@binaryjack/formular.dev": "^1.0.57",
+    "@binaryjack/formular.dev": "workspace:*",
     "@vbs/vbs-mod": "workspace:*",
     "@vbs/vbs-style": "workspace:*"
   },

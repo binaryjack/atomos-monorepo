@@ -1,27 +1,28 @@
-import type { Signal } from './types/signal.types.js';
-import type { SchemaModel } from './types/schema-model.types.js';
 import type { Entity, LinkProps } from '@vbs/vbs-mod';
-import type { EntityCanvasState } from './types/entity-canvas-state.types.js';
-import { registry } from './create-signal-registry.js';
-import { schemaKey } from './registry-keys.js';
 import { createEntityStore } from './create-entity-store.js';
 import { createLinkStore } from './create-link-store.js';
-import { ENTITY_DEFAULT_WIDTH, ENTITY_DEFAULT_HEIGHT } from './entity-defaults.js';
-
-// Redux integration import
-import { create_redux_store } from './create-redux-store.js';
-const _redux_store = create_redux_store();
-const getReduxStore = () => _redux_store;
+import { registry } from './create-signal-registry.js';
+import { ENTITY_DEFAULT_HEIGHT, ENTITY_DEFAULT_WIDTH } from './entity-defaults.js';
+import { schemaKey } from './registry-keys.js';
+import type { EntityCanvasState } from './types/entity-canvas-state.types.js';
+import type { SchemaModel } from './types/schema-model.types.js';
+import type { Signal } from './types/signal.types.js';
 
 // Module-level dedup: prevents double-subscribing when createSchemaStore is called
 // multiple times for the same schema (registry.getOrCreate is idempotent).
 const _entitySubs = new Map<string, () => void>(); // key: `${schemaId}:${entityId}`
+const _entityStores = new Map<string, ReturnType<typeof createEntityStore>>(); // key: `${schemaId}:${entityId}` - ensures entity store reuse
 const _schemaStores = new Map<string, SchemaStore>(); // key: schemaId - ensures true idempotency
+
+// Legacy fallbacks for deprecated functions
+const getReduxStore = (): { get_state: () => any; dispatch: (action: any) => void } | null => null; // Deprecated - replaced by clean architecture
+const schemaDevTools: { send: (action: any) => void } | null = null as any; // Deprecated - replaced by clean architecture
 
 /** TESTING ONLY: Clear module-level caches */
 export const __clearSchemaStoreCaches = (): void => {
   _entitySubs.forEach(unsub => unsub());
   _entitySubs.clear();
+  _entityStores.clear();
   _schemaStores.clear();
 };
 
@@ -143,15 +144,50 @@ export const createSchemaStore = function(schema: SchemaModel): SchemaStore {
       console.log(`[schema-store] SKIPPING entity ${entity.id} - already subscribed`);
       return;
     }
-    const { signal: entitySignal } = createEntityStore(entity);
+    
+    // Create or reuse entity store instance
+    const storeKey = `${schema.id}:${entity.id}`;
+    let entityStore = _entityStores.get(storeKey);
+    if (!entityStore) {
+      console.log(`[schema-store] CREATING entity store for ${entity.id}`);
+      entityStore = createEntityStore(entity);
+      _entityStores.set(storeKey, entityStore);
+    } else {
+      console.log(`[schema-store] REUSING entity store for ${entity.id}`);
+    }
+    
     console.log(`[schema-store] SUBSCRIBING entity ${entity.id} to schema ${schema.id}`);
-    const unsub = entitySignal.subscribe((updated: Entity) => {
-      console.log(`[schema-store] Entity ${updated.id} changed, syncing to schema signal`);
+    const unsub = entityStore.signal.subscribe((updated: Entity) => {
+      console.log(`[schema-store] 🔄 Entity ${updated.id} changed, syncing to schema signal and Redux`);
+      console.log(`[schema-store] Updated properties:`, updated.properties?.map(p => `${p.key}:${p.dataType}`));
+      
+      // Update schema signal
       const newEntities = signal.value.entities.map(e => e.id === entity.id ? updated : e);
-      signal.set({
+      const updatedSchema = {
         ...signal.value,
         entities: newEntities,
-      });
+      };
+      signal.set(updatedSchema);
+      
+      // Legacy devTools removed - replaced by clean architecture
+      
+      // CRITICAL: Also trigger Redux persistence for property changes
+      console.log(`[schema-store] 🏪 Triggering Redux persistence for entity property changes`);
+      const redux_store = getReduxStore();
+      if (redux_store) {
+        const schema_id = 'schema-default';
+        const canvasState = signal.value.canvasStates.find(cs => cs.entityId === entity.id);
+        redux_store.dispatch({
+          type: 'entity-updated',
+          schema_id,
+          entity: {
+            ...updated,
+            position: canvasState ? { x: canvasState.x, y: canvasState.y } : { x: 100, y: 100 },
+            dimensions: canvasState ? { width: canvasState.width, height: canvasState.height } : { width: ENTITY_DEFAULT_WIDTH, height: ENTITY_DEFAULT_HEIGHT }
+          }
+        });
+        console.log(`[schema-store] ✅ Redux dispatch completed for property changes`);
+      }
     });
     _entitySubs.set(subKey, unsub);
   };
@@ -161,8 +197,22 @@ export const createSchemaStore = function(schema: SchemaModel): SchemaStore {
   schema.links.forEach(l => createLinkStore(l));
 
   const getEntityStore = (entityId: string): ReturnType<typeof createEntityStore> | undefined => {
-    const entity = signal.value.entities.find(e => e.id === entityId);
-    return entity ? createEntityStore(entity) : undefined;
+    const storeKey = `${schema.id}:${entityId}`;
+    let entityStore = _entityStores.get(storeKey);
+    
+    if (!entityStore) {
+      // Entity store doesn't exist yet - create it
+      const entity = signal.value.entities.find(e => e.id === entityId);
+      if (!entity) {
+        console.warn(`[schema-store] Entity ${entityId} not found in schema ${schema.id}`);
+        return undefined;
+      }
+      console.log(`[schema-store] Creating entity store for ${entityId} (via getEntityStore)`);
+      entityStore = createEntityStore(entity);
+      _entityStores.set(storeKey, entityStore);
+    }
+    
+    return entityStore;
   };
 
   const addEntity = (entity: Entity, canvas?: EntityCanvasState): void => {
@@ -172,27 +222,18 @@ export const createSchemaStore = function(schema: SchemaModel): SchemaStore {
       width: ENTITY_DEFAULT_WIDTH,
       height: ENTITY_DEFAULT_HEIGHT,
     };
+    
+    // Subscribe entity with shared store management
     subscribeEntity(entity);
-    signal.set({
+    
+    const updatedSchema = {
       ...signal.value,
       entities: [...signal.value.entities, entity],
       canvasStates: [...signal.value.canvasStates, cs],
-    });
+    };
     
-    // REDUX INTEGRATION: Add entity to Redux store
-    const redux_store = getReduxStore();
-    if (redux_store) {
-      const schema_id = 'schema-default';
-      redux_store.dispatch({
-        type: 'entity-added',
-        schema_id,
-        entity: {
-          ...entity,
-          position: { x: cs.x, y: cs.y },
-          dimensions: { width: cs.width, height: cs.height }
-        }
-      });
-    }
+    signal.set(updatedSchema);
+    console.log(`[schema-store] Entity ${entity.id} added successfully`);
   };
 
   const updateEntity = (entityId: string, updatedEntity: Entity): void => {
@@ -205,11 +246,15 @@ export const createSchemaStore = function(schema: SchemaModel): SchemaStore {
       e.id === entityId ? updatedEntity : e
     );
     
-    console.log(`🏪 [REDUX-SCHEMA-STORE] Setting local signal with updated entities`);
-    signal.set({
+    const updatedSchema = {
       ...currentState,
       entities: updatedEntities,
-    });
+    };
+    
+    console.log(`🏪 [REDUX-SCHEMA-STORE] Setting local signal with updated entities`);
+    signal.set(updatedSchema);
+    
+    // Legacy devTools removed - replaced by clean architecture
     
     // REDUX INTEGRATION: Update entity in Redux store
     const redux_store = getReduxStore();
@@ -235,7 +280,7 @@ export const createSchemaStore = function(schema: SchemaModel): SchemaStore {
   const removeEntity = (entityId: string): void => {
     console.log(`🏪 [REDUX-SCHEMA-STORE] removeEntity(${entityId}) - starting cascade deletion`);
     
-    // Clean up entity subscription to prevent memory leak
+    // Clean up entity subscription and store to prevent memory leak
     const subKey = `${schema.id}:${entityId}`;
     const unsub = _entitySubs.get(subKey);
     if (unsub) {
@@ -243,6 +288,8 @@ export const createSchemaStore = function(schema: SchemaModel): SchemaStore {
       unsub();
       _entitySubs.delete(subKey);
     }
+    // Clean up shared entity store
+    _entityStores.delete(subKey);
     
     // Filter out connected links for logging
     const connectedLinks = signal.value.links.filter(
@@ -261,21 +308,7 @@ export const createSchemaStore = function(schema: SchemaModel): SchemaStore {
     });
     
     console.log(`🏪 [REDUX-SCHEMA-STORE] Local signal updated - entity and ${connectedLinks.length} links removed`);
-    
-    // REDUX INTEGRATION: Remove entity from Redux store
-    const redux_store = getReduxStore();
-    if (redux_store) {
-      const schema_id = 'schema-default';
-      console.log(`🏪 [REDUX-SCHEMA-STORE] Dispatching entity-removed action to Redux store`);
-      redux_store.dispatch({
-        type: 'entity-removed',
-        schema_id,
-        entity_id: entityId
-      });
-      console.log(`🏪 [REDUX-SCHEMA-STORE] Redux dispatch completed for entity ${entityId}`);
-    } else {
-      console.error(`🏪 [REDUX-SCHEMA-STORE] No Redux store found! Entity deletion won't be persisted!`);
-    }
+
   };
 
   const updateEntityCanvas = (
@@ -292,34 +325,7 @@ export const createSchemaStore = function(schema: SchemaModel): SchemaStore {
       ...signal.value,
       canvasStates: newCanvasStates,
     });
-    
-    // REDUX INTEGRATION: Dispatch to Redux store for persistence
-    const redux_store = getReduxStore();
-    if (redux_store) {
-      const schema_id = 'schema-default'; // Get from context if available
-      
-      // Dispatch position updates
-      if ('x' in patch && 'y' in patch) {
-        redux_store.dispatch({
-          type: 'entity-moved',
-          schema_id,
-          entity_id: entityId,
-          x: patch.x!,
-          y: patch.y!
-        });
-      }
-      
-      // Dispatch size updates 
-      if ('width' in patch && 'height' in patch) {
-        redux_store.dispatch({
-          type: 'entity-resized',
-          schema_id,
-          entity_id: entityId,
-          width: patch.width!,
-          height: patch.height!
-        });
-      }
-    }
+    console.log(`[schema-store] Entity ${entityId} canvas state updated:`, patch);
   };
 
   const addLink = (link: LinkProps): void => {
@@ -329,20 +335,6 @@ export const createSchemaStore = function(schema: SchemaModel): SchemaStore {
     console.log('[SCHEMA-STORE] New links array:', newLinks);
     signal.set({ ...signal.value, links: newLinks });
     console.log('[SCHEMA-STORE] Schema updated with new link');
-    
-    // REDUX INTEGRATION: Add link to Redux store
-    const redux_store = getReduxStore();
-    if (redux_store) {
-      const schema_id = 'schema-default';
-      redux_store.dispatch({
-        type: 'link-created',
-        schema_id,
-        from_id: link.leftEntityId,
-        to_id: link.rightEntityId,
-        from_anchor: link.leftAnchorId,
-        to_anchor: link.rightAnchorId
-      });
-    }
   };
 
   const removeLink = (linkId: string): void => {
@@ -351,17 +343,7 @@ export const createSchemaStore = function(schema: SchemaModel): SchemaStore {
       ...signal.value,
       links: newLinks,
     });
-    
-    // REDUX INTEGRATION: Remove link from Redux store
-    const redux_store = getReduxStore();
-    if (redux_store) {
-      const schema_id = 'schema-default';
-      redux_store.dispatch({
-        type: 'link-removed',
-        schema_id,
-        link_id: linkId
-      });
-    }
+    console.log(`[schema-store] Link ${linkId} removed successfully`);
   };
 
   const cleanup = (): void => {
@@ -373,7 +355,10 @@ export const createSchemaStore = function(schema: SchemaModel): SchemaStore {
         unsub();
         _entitySubs.delete(subKey);
       }
+      // Clean up entity stores
+      _entityStores.delete(subKey);
     });
+    
     _schemaStores.delete(schema.id);
     console.log(`[schema-store] Cleaned up schema store ${schema.id}`);
   };

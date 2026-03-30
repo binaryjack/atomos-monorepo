@@ -1,15 +1,18 @@
-import './index.js';
-import type { VbsModal } from './vbs-modal.js';
-import type { Property, DataType, Entity } from '@vbs/vbs-mod';
-import type { IFormular, IObjectShape } from '@binaryjack/formular.dev';
-import { createForm, f } from '@binaryjack/formular.dev';
-import type { EntityStore } from '../../core/create-entity-store.js';
-import type { IStorageProvider } from '../../core/storage/types/storage-provider.types.js';
-import { createPropertyRepository } from '../../core/repository/create-property-repository.js';
-import { createValidationModal } from './create-validation-modal.js';
-import { createValidationBadge } from './create-validation-badge.js';
-import { createFormularInput } from '../formular/atoms/create-formular-input.js';
-import { createFormularDropdown } from '../formular/atoms/create-formular-dropdown.js';
+import type { IFormular, IObjectShape } from '@binaryjack/formular.dev'
+import { f } from '@binaryjack/formular.dev'
+import type { DataType, Entity, Property } from '@vbs/vbs-mod'
+import { createLegacyPropertyRepositoryBridge } from '../../core/adapters/legacy-property-bridge.js'
+import type { EntityStore } from '../../core/create-entity-store.js'
+import { createFormularManager } from '../../core/create-formular-manager.js'
+import type { IStorageProvider } from '../../core/storage/types/storage-provider.types.js'
+import { createFormularDropdown } from '../formular/atoms/create-formular-dropdown.js'
+import { createFormularInput } from '../formular/atoms/create-formular-input.js'
+import { createValidationBadge } from './create-validation-badge.js'
+import { createValidationModal } from './create-validation-modal.js'
+import './index.js'
+import type { ModalOptions } from './types/modal-options.types.js'
+import type { ModalResult } from './types/modal-result.types.js'
+import type { VbsModal } from './vbs-modal.js'
 
 export interface PropertySettingsModalProps {
   readonly property: Property;
@@ -24,32 +27,71 @@ export const createPropertySettingsModal = function(
   modal.style.setProperty('--vbs-modal-width', '480px');
 
   let currentValidation = props.property.validation;
+  let isInitialized = false;
+  let currentForm: IFormular<IObjectShape> | null = null;
+  let fieldCleanups: Array<() => void> = [];
+
+  // Create FormularManager for this modal
+  const formManager = createFormularManager();
 
   // Header
   const header = document.createElement('vbs-modal-header');
   header.textContent = `Property: ${props.property.label}`;
   header.setAttribute('slot', 'header');
 
-  // Body
+  // Body - initially empty, will be populated on first open
   const body = document.createElement('div');
   body.className = 'flex flex-col gap-4 p-4';
 
-  // Build form asynchronously
-  const initializeForm = async () => {
-    const schema = f.object({
-      label: f.string().min(1, 'Label is required'),
-      dataType: f.string(),
-      componentType: f.string(),
-    });
+  // Footer - initially empty, will be populated on first open
+  const footer = document.createElement('vbs-modal-footer');
+  footer.setAttribute('slot', 'footer');
 
-    const form = await createForm({ schema }) as unknown as IFormular<IObjectShape>;
+  // Set up modal structure immediately
+  modal.appendChild(header);
+  modal.appendChild(body);
+  modal.appendChild(footer);
 
-    // Pre-fill form
-    form.updateField('label', props.property.label);
-    form.updateField('dataType', props.property.dataType);
-    form.updateField('componentType', props.property.componentType);
+  // Enhanced form initialization using FormularManager
+  const initializeForm = async (preservedData?: any) => {
+    console.log('[PROPERTY-MODAL] Initializing form with FormularManager, preserved data:', preservedData);
+    
+    try {
+      // Clear existing UI
+      body.innerHTML = '';
+      footer.innerHTML = '';
+      fieldCleanups.forEach(fn => fn());
+      fieldCleanups = [];
 
-    const cleanups: Array<() => void> = [];
+      const schema = f.object({
+        label: f.string().min(1, 'Label is required'),
+        dataType: f.string(),
+        componentType: f.string(),
+      });
+
+      // Use FormularManager for safe form creation
+      currentForm = await formManager.createFormForModal(modal, { 
+        schema,
+        defaultValues: {
+          label: preservedData?.label ?? props.property.label,
+          dataType: preservedData?.dataType ?? props.property.dataType,
+          componentType: preservedData?.componentType ?? props.property.componentType,
+        }
+      }) as unknown as IFormular<IObjectShape>;
+
+      // Create form fields
+      if (currentForm) {
+        await createFormFields(currentForm);
+      }
+      
+    } catch (error) {
+      console.error('[PROPERTY-MODAL] Error initializing form:', error);
+      throw error;
+    }
+  };
+
+  // Shared form fields creation logic
+  const createFormFields = async (form: IFormular<IObjectShape>) => {
 
     // Label field
     const labelField = createFormularInput({
@@ -59,7 +101,7 @@ export const createPropertySettingsModal = function(
       guide: 'Display name for this property',
     });
     body.appendChild(labelField.element);
-    cleanups.push(labelField.cleanup.destroy);
+    fieldCleanups.push(labelField.cleanup.destroy);
 
     // Data Type dropdown
     const dataTypeField = createFormularDropdown({
@@ -75,7 +117,7 @@ export const createPropertySettingsModal = function(
       ],
     });
     body.appendChild(dataTypeField.element);
-    cleanups.push(dataTypeField.cleanup.destroy);
+    fieldCleanups.push(dataTypeField.cleanup.destroy);
 
     // Component Type dropdown
     const componentTypeField = createFormularDropdown({
@@ -92,7 +134,7 @@ export const createPropertySettingsModal = function(
       ],
     });
     body.appendChild(componentTypeField.element);
-    cleanups.push(componentTypeField.cleanup.destroy);
+    fieldCleanups.push(componentTypeField.cleanup.destroy);
 
     // Validation section
     const validationSection = document.createElement('div');
@@ -108,38 +150,56 @@ export const createPropertySettingsModal = function(
     const validationBadge = createValidationBadge({
       ...(currentValidation !== undefined ? { validation: currentValidation } : {}),
       onClick: async () => {
-        const data = form.getData();
-        const validationModal = createValidationModal({
-          propertyKey: props.property.key,
-          dataType: data.dataType as DataType,
-          ...(currentValidation !== undefined ? { currentValidation } : {}),
-        });
+        console.log('[PROPERTY-MODAL] Opening validation modal with FormularManager...');
+        
+        // Get current form data before opening validation modal
+        const currentData = form.getData();
+        
+        // Clear form UI temporarily with loading message
+        body.innerHTML = '<div style="padding: 20px; text-align: center; color: #64748b;">Opening validation settings...</div>';
+        
+        try {
+          const validationModal = createValidationModal({
+            propertyKey: props.property.key,
+            dataType: currentData.dataType as DataType,
+            ...(currentValidation !== undefined ? { currentValidation } : {}),
+          });
 
-        const result = await validationModal.open();
-        if (result) {
-          currentValidation = result;
-          validationBadge.update(result);
+          const result = await validationModal.open();
+          if (result) {
+            currentValidation = result;
+          }
+          validationModal.modal.remove();
+          
+          // Recreate the form with preserved data + new validation
+          console.log('[PROPERTY-MODAL] Validation modal closed - recreating form with FormularManager...');
+          await initializeForm(currentData);
+          
+        } catch (error) {
+          console.error('[PROPERTY-MODAL] Error in validation modal:', error);
+          // Recreate form even if validation failed
+          await initializeForm(currentData);
         }
-        validationModal.modal.remove();
       },
     });
 
     validationHeader.appendChild(validationLabel);
     validationHeader.appendChild(validationBadge.element);
+    
+    // Add validation badge cleanup to the field cleanups
+    fieldCleanups.push(validationBadge.cleanup.destroy);
 
     validationSection.appendChild(validationHeader);
     body.appendChild(validationSection);
 
-    // Footer
-    const footer = document.createElement('vbs-modal-footer');
-    footer.setAttribute('slot', 'footer');
-
+    // Create footer buttons
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
     cancelBtn.textContent = 'Cancel';
     cancelBtn.className = 'ghost';
     cancelBtn.addEventListener('click', () => {
-      cleanups.forEach(fn => fn());
+      // FormularManager will automatically clean up when modal closes
+      fieldCleanups.forEach(fn => fn()); 
       modal.close();
     });
 
@@ -148,15 +208,20 @@ export const createPropertySettingsModal = function(
     saveBtn.textContent = 'Save';
     saveBtn.className = 'primary';
     saveBtn.addEventListener('click', async () => {
-      const isValid = await form.validateForm();
+      if (!currentForm) {
+        console.warn('[PROPERTY-MODAL] No form available for validation');
+        return;
+      }
+
+      const isValid = await currentForm.validateForm();
       if (!isValid) {
         return;
       }
 
-      const data = form.getData();
+      const data = currentForm.getData();
 
-      // Create repository and update via proper abstraction
-      const repository = createPropertyRepository({
+      // Create repository bridge and update via clean architecture
+      const repository = createLegacyPropertyRepositoryBridge({
         entityId: props.entityStore.signal.value.id,
         entitySignal: props.entityStore.signal,
         storageProvider: props.storageProvider
@@ -169,23 +234,56 @@ export const createPropertySettingsModal = function(
         ...(currentValidation !== undefined ? { validation: currentValidation } : {})
       });
 
-      cleanups.forEach(fn => fn());
+      // Clean up before closing
+      fieldCleanups.forEach(fn => fn());
+      formManager.cleanupModal(modal);
       modal.close();
     });
 
     footer.appendChild(cancelBtn);
     footer.appendChild(saveBtn);
-
-    modal.appendChild(header);
-    modal.appendChild(body);
-    modal.appendChild(footer);
-    document.body.appendChild(modal);
+    
+    console.log('[PROPERTY-MODAL] ✓ Form fields created successfully with FormularManager');
   };
 
-  // Initialize form when modal is opened
-  initializeForm().catch(err => {
-    console.error('Failed to initialize property settings modal:', err);
-  });
+  // Override modal's open method to implement lazy initialization
+  const originalOpen = modal.open.bind(modal);
+  modal.open = async function<T = void>(options?: ModalOptions<T>): Promise<ModalResult<T>> {
+    if (!isInitialized) {
+      console.log('[PROPERTY-MODAL] First open - initializing form with FormularManager...');
+      try {
+        await initializeForm();
+        isInitialized = true;
+      } catch (error) {
+        console.error('[PROPERTY-MODAL] Failed to initialize form:', error);
+        // Show error in modal body
+        body.innerHTML = `
+          <div style="color: #ef4444; padding: 20px; text-align: center;">
+            <p>Failed to initialize form</p>
+            <p style="font-size: 12px; opacity: 0.7;">${error instanceof Error ? error.message : String(error)}</p>
+          </div>
+        `;
+      }
+    }
+    
+    // Add modal to DOM if not already present
+    if (!modal.parentElement) {
+      document.body.appendChild(modal);
+    }
+    
+    return originalOpen(options);
+  };
+
+  // Override modal's close method to ensure proper cleanup
+  const originalClose = modal.close.bind(modal);
+  modal.close = function() {
+    console.log('[PROPERTY-MODAL] Closing modal - cleaning up with FormularManager');
+    fieldCleanups.forEach(fn => fn());
+    fieldCleanups = [];
+    formManager.cleanupModal(modal);
+    currentForm = null;
+    return originalClose();
+  };
 
   return modal;
 };
