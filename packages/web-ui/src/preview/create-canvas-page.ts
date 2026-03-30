@@ -2,6 +2,9 @@ import { createCanvasViewport } from '../core/create-canvas-viewport.js';
 import { createWorkspaceManager } from '../core/create-workspace-manager.js';
 import { createInteractiveEntityDemo } from '../features/entity-with-edges/create-interactive-entity-demo.js';
 
+import { getEntityManager } from '../core/presentation/entity-manager.js';
+import { autoLayoutDAG, deserializeDAG, serializeDAG } from '../core/application/dag-service.js';
+
 export const createCanvasPage = function() {
   const cleanups: Array<() => void> = [];
 
@@ -98,6 +101,64 @@ export const createCanvasPage = function() {
     zoomLabel.textContent = `${Math.round(s.zoom * 100)}%`;
   });
   canvasWrap.appendChild(zoomLabel);
+
+  // Tools Panel (DAG Tools)
+  const floatMenu = document.createElement('div');
+  floatMenu.style.cssText = [
+    'position:absolute;top:16px;right:16px;',
+    'display:flex;gap:8px;z-index:20;'
+  ].join('');
+
+  const btnStyle = 'background:#1e293b;color:#f1f5f9;border:1px solid #334155;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:system-ui,sans-serif;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);';
+
+  const exportBtn = document.createElement('button');
+  exportBtn.textContent = 'Export DAG';
+  exportBtn.style.cssText = btnStyle;
+  exportBtn.onclick = () => {
+    const json = serializeDAG(getEntityManager());
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dag-export-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importInput = document.createElement('input');
+  importInput.type = 'file';
+  importInput.accept = 'application/json';
+  importInput.style.display = 'none';
+  importInput.onchange = async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) {
+      const text = await file.text();
+      try {
+        deserializeDAG(getEntityManager(), text, true);
+        importInput.value = ''; // Reset
+      } catch (err) {
+        alert('Invalid DAG JSON file.');
+      }
+    }
+  };
+
+  const importBtn = document.createElement('button');
+  importBtn.textContent = 'Import/Restore Layout';
+  importBtn.style.cssText = btnStyle;
+  importBtn.onclick = () => importInput.click();
+
+  const autoLayoutBtn = document.createElement('button');
+  autoLayoutBtn.textContent = 'Auto-Layout Nodes';
+  autoLayoutBtn.style.cssText = btnStyle;
+  autoLayoutBtn.onclick = () => {
+    autoLayoutDAG(getEntityManager());
+  };
+
+  floatMenu.appendChild(exportBtn);
+  floatMenu.appendChild(importInput);
+  floatMenu.appendChild(importBtn);
+  floatMenu.appendChild(autoLayoutBtn);
+  canvasWrap.appendChild(floatMenu);
 
   return {
     element: root,

@@ -11,6 +11,7 @@ export interface LinkResult {
     dstEdge?: EdgePosition
   ) => void;
   readonly setTemporary: (temporary: boolean) => void;
+  readonly setValidity: (isValid: boolean) => void;
   readonly cleanup: {
     readonly destroy: () => void;
   };

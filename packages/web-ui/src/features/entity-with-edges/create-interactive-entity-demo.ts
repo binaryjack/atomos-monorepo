@@ -158,9 +158,54 @@ export const createInteractiveEntityDemo = function(workspace: WorkspaceManager)
   // Clean event handling - No cascading subscriptions
   canvasAdapter.onEntityChanged(event => {
     console.log('📡 [CANVAS-PAGE] CANVAS WORKING: Clean architecture entity event:', event.type);
-    // Handle UI updates here if needed
+    
+    switch (event.type) {
+      case 'EntityCreated': {
+        const exists = workspace.workspaceState.value.entities.has(event.entity.id);
+        if (!exists) {
+          const domainEntity = event.entity;
+          const ep = makeEntityProps(domainEntity.id, domainEntity.name, domainEntity.position.x, domainEntity.position.y, domainEntity.dimensions.width, domainEntity.dimensions.height, domainEntity.properties as any[]);
+          const instance = spawnEntity(ep, workspace, { value: DEFAULT_GLOBAL_CONFIG }, canvasAdapter);
+          workspace.registerEntity(instance);
+        }
+        break;
+      }
+      case 'EntityRemoved': {
+        workspace.unregisterEntity(event.entityId);
+        break;
+      }
+      case 'EntityMoved': {
+        const instance = workspace.workspaceState.value.entities.get(event.entityId);
+        if (instance) {
+          instance.position.set({ x: event.position.x, y: event.position.y });
+        }
+        break;
+      }
+      case 'LinkCreated': {
+        const link = event.link;
+        const exists = workspace.linkManager.getLink(link.id);
+        if (!exists) {
+          const srcEntity = canvasAdapter.getEntity(link.sourceEntityId);
+          const dstEntity = canvasAdapter.getEntity(link.targetEntityId);
+          if (srcEntity && dstEntity) {
+            const srcPos = computeAnchorPos(srcEntity, link.sourceAnchorId.split('-').pop() || 'right');
+            const dstPos = computeAnchorPos(dstEntity, link.targetAnchorId.split('-').pop() || 'left');
+            workspace.restoreLink(
+              link.id,
+              link.sourceAnchorId, srcPos, link.sourceEntityId, 'right' as any,
+              link.targetAnchorId, dstPos, link.targetEntityId, 'left' as any
+            );
+          }
+        }
+        break;
+      }
+      case 'LinkRemoved': {
+        workspace.linkManager.removeLink(event.linkId);
+        break;
+      }
+    }
   });
-  
+
   // Wire up workspace events to clean architecture - Actually persist links
     (workspace as any).onLinkCreated = (link: any, isReconnect: boolean) => {
       console.log('[CANVAS-PAGE] 🔗 Link created through workspace - Persisting via clean architecture');

@@ -22,3 +22,5 @@ export type { EntityRegistry } from './create-entity-registry.js';
 export type { LinkDrawController } from './create-link-draw-controller.js';
 export type { LinkFinalizer } from './create-link-finalizer.js';
 export type { CanvasEventHandler } from './create-canvas-event-handler.js';
+export { serializeDAG, deserializeDAG, autoLayoutDAG } from './application/dag-service.js';
+export type { DAGExport } from './application/dag-service.js';

@@ -13,6 +13,7 @@ export interface LinkDrawController {
   ) => void;
   readonly clearTempLink: () => void;
   readonly updateTempLink: (svgCoords: { x: number; y: number }) => void;
+  readonly setTempLinkValidity: (isValid: boolean) => void;
   readonly isDrawing: () => boolean;
   readonly getActiveTempLinkId: () => string | undefined;
   readonly getActiveTempLinkSourcePos: () => { x: number; y: number } | undefined;
@@ -107,6 +108,12 @@ export const createLinkDrawController = function(
     if (tempLink) tempLink.updatePath(activeTempLinkSourcePos, svgCoords, activeTempSrcEdge);
   };
 
+  const setTempLinkValidity = (isValid: boolean): void => {
+    if (!activeTempLinkId) return;
+    const tempLink = linkManager.getLink(activeTempLinkId);
+    if (tempLink) tempLink.setValidity(isValid);
+  };
+
   const isDrawing = (): boolean =>
     behaviorManager.behaviorState.value.linkCreation === 'drawing';
 
@@ -126,6 +133,7 @@ export const createLinkDrawController = function(
     startLinkFromAnchor,
     clearTempLink,
     updateTempLink,
+    setTempLinkValidity,
     isDrawing,
     isReconnecting,
     getReconnectLinkId,

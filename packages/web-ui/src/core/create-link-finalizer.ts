@@ -5,6 +5,10 @@ import { bezierMidpoint } from './bezier.js';
 import type { LinkManager } from './types/link-manager.types.js';
 import type { Signal } from './types/signal.types.js';
 import type { WorkspaceState } from './types/workspace-state.types.js';
+import { validateTopologicalConnection } from './domain/validate-topological-connection.js';
+import { registry } from './create-signal-registry.js';
+import { GLOBAL_KEY } from './registry-keys.js';
+import type { GlobalConfig } from './types/global-config.types.js';
 
 export interface LinkFinalizer {
   readonly finalizeLinkToAnchor: (
@@ -243,6 +247,32 @@ export const createLinkFinalizer = function(
       src: `${srcEntityId}:${srcAnchorId}`,
       dst: `${dstEntityId}:${dstAnchorId}`
     });
+
+    if (!isRestoration) {
+      const globalConfigSig = registry.get<GlobalConfig>(GLOBAL_KEY);
+      const topologyRules = globalConfigSig?.value.topology;
+      
+      const adapter = getCanvasAdapter();
+      const srcEntity = adapter.getEntity(srcEntityId);
+      const dstEntity = adapter.getEntity(dstEntityId);
+      
+      if (srcEntity && dstEntity) {
+        // Collect links domain properties safely 
+        const allLinks = (adapter.getAllLinks?.() || []) as any[];
+        const validation = validateTopologicalConnection(
+          srcEntity, 
+          dstEntity, 
+          allLinks, 
+          topologyRules
+        );
+        
+        if (!validation.isValid) {
+          console.warn('[LINK-FINALIZER] Topological connection rejected:', validation.reason);
+          // TODO: Provide visual user feedback (toast or validation badge)
+          return;
+        }
+      }
+    }
 
     const linkId = optionalLinkId || `link-${srcAnchorId}-${dstAnchorId}-${Date.now()}`;
 

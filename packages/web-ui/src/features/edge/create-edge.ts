@@ -1,7 +1,8 @@
+import { computeShapeAnchorPos } from '../../canvas/geometry/compute-shape-anchor-pos.js';
+import { createSignal } from '../../core/create-signal.js';
+import { createAnchor } from '../anchor/create-anchor.js';
 import type { EdgeProps, EdgeResult, EdgeState } from './types/edge.types.js';
 export type { EdgeProps, EdgeResult, EdgeState };
-import { createAnchor } from '../anchor/create-anchor.js';
-import { createSignal } from '../../core/create-signal.js';
 
 const HIT_SIZE = 32;
 
@@ -41,12 +42,7 @@ export const createEdge = function(props: EdgeProps): EdgeResult {
   };
 
   const computeAnchorPos = (pos: { x: number; y: number }, dims: { width: number; height: number }) => {
-    switch (props.position) {
-      case 'top':    return { x: pos.x + dims.width / 2,  y: pos.y               };
-      case 'bottom': return { x: pos.x + dims.width / 2,  y: pos.y + dims.height };
-      case 'left':   return { x: pos.x,                   y: pos.y + dims.height / 2 };
-      case 'right':  return { x: pos.x + dims.width,      y: pos.y + dims.height / 2 };
-    }
+    return computeShapeAnchorPos(props.shape, { ...pos, ...dims }, props.position);
   };
 
   const pos0  = props.entityPosition.value;

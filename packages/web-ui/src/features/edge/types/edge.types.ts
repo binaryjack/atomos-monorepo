@@ -1,4 +1,5 @@
-import type { Signal } from '../../../core/types/signal.types.js';
+import type { EntityShape } from '@vbs/vbs-mod'
+import type { Signal } from '../../../core/types/signal.types.js'
 
 export type EdgePosition = 'top' | 'bottom' | 'left' | 'right';
 export type EdgeState = 'default' | 'hover' | 'active' | 'connected';
@@ -6,6 +7,7 @@ export type EdgeState = 'default' | 'hover' | 'active' | 'connected';
 export interface EdgeProps {
   readonly position: EdgePosition;
   readonly entityId: string;
+  readonly shape?: EntityShape | undefined;
   readonly entityPosition: Signal<{ x: number; y: number }>;
   readonly entityDimensions: Signal<{ width: number; height: number }>;
   readonly thickness: 3 | 5;

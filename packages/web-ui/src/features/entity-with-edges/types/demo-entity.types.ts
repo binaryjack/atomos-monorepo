@@ -1,13 +1,14 @@
-import type { Signal } from '../../../core/types/signal.types.js';
-import type { Entity } from '@vbs/vbs-mod';
-import type { GlobalConfig } from '../../../core/types/global-config.types.js';
-import type { WorkspaceManager } from '../../../core/types/workspace-manager.types.js';
-import type { EntityInstance } from '../../../core/types/entity-instance.types.js';
-import type { IStorageProvider } from '../../../core/storage/types/storage-provider.types.js';
+import type { Entity, EntityShape } from '@vbs/vbs-mod';
 import type { EntityStore } from '../../../core/create-entity-store.js';
+import type { IStorageProvider } from '../../../core/storage/types/storage-provider.types.js';
+import type { EntityInstance } from '../../../core/types/entity-instance.types.js';
+import type { GlobalConfig } from '../../../core/types/global-config.types.js';
+import type { Signal } from '../../../core/types/signal.types.js';
+import type { WorkspaceManager } from '../../../core/types/workspace-manager.types.js';
 
 export interface DemoEntityProps {
   readonly id: string;
+  readonly shape?: EntityShape | undefined;
   readonly entityStore: EntityStore;
   readonly globalConfig: Signal<GlobalConfig>;
   readonly position: Signal<{ x: number; y: number }>;

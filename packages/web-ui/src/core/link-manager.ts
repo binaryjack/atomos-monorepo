@@ -22,8 +22,7 @@ export interface LinkResult {
   readonly sourceAnchorId: string;
   readonly targetAnchorId?: string;
   readonly updatePath: (sourcePos: { x: number; y: number }, targetPos: { x: number; y: number }, srcEdge?: EdgePosition, dstEdge?: EdgePosition) => void;
-  readonly setTemporary: (temporary: boolean) => void;
-  readonly cleanup: {
+  readonly setTemporary: (temporary: boolean) => void;  readonly setValidity: (isValid: boolean) => void;  readonly cleanup: {
     readonly destroy: () => void;
   };
 }
@@ -112,6 +111,14 @@ export const createLinkManager = function(): LinkManager {
       });
     }
 
+    const setValidity = (isValid: boolean) => {
+      if (isValid) {
+        path.setAttribute('stroke', props.strokeColor ?? '#cbd5e1'); // default bright color
+      } else {
+        path.setAttribute('stroke', '#ef4444'); // red-500
+      }
+    };
+
     updatePath(props.sourcePosition, props.targetPosition);
 
     const linkResult: LinkResult = {
@@ -120,6 +127,7 @@ export const createLinkManager = function(): LinkManager {
       ...(props.targetAnchorId !== undefined ? { targetAnchorId: props.targetAnchorId } : {}),
       updatePath,
       setTemporary,
+      setValidity,
       cleanup: {
         destroy: () => {
           if (path.parentNode) path.parentNode.removeChild(path);

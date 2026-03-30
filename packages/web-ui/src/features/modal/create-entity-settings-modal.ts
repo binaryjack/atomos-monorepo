@@ -3,7 +3,10 @@ import { f } from '@binaryjack/formular.dev'
 import { getCanvasAdapter } from '../../core/adapters/canvas-adapter.js'
 import { createFormularManager } from '../../core/create-formular-manager.js'
 import { createButton } from '../button/create-button.js'
+import { createFormularCheckbox } from '../formular/atoms/create-formular-checkbox.js'
+import { createFormularDropdown } from '../formular/atoms/create-formular-dropdown.js'
 import { createFormularInput } from '../formular/atoms/create-formular-input.js'
+import { createFormularTextarea } from '../formular/atoms/create-formular-textarea.js'
 import './index.js'
 import type { ModalOptions } from './types/modal-options.types.js'
 import type { ModalResult } from './types/modal-result.types.js'
@@ -48,15 +51,35 @@ export const createEntitySettingsModal = function(entityId: string): VbsModal {
     fieldCleanups.forEach(fn => fn());
     fieldCleanups = [];
 
-    const schema = f.object({
+    const schemaShape: Record<string, any> = {
       name: f.string().min(1, 'Name is required')
+    };
+    
+    // Dynamically build schema based on entity's properties
+    liveEntity.properties.forEach(prop => {
+      if (prop.dataType === 'boolean') {
+        schemaShape[prop.key] = f.boolean();
+      } else if (prop.dataType === 'number' || prop.dataType === 'integer' || prop.dataType === 'float') {
+        schemaShape[prop.key] = f.number();
+      } else {
+        schemaShape[prop.key] = f.string();
+      }
+    });
+
+    const schema = f.object(schemaShape);
+
+    const defaultValues: Record<string, any> = {
+      name: preservedData?.name ?? liveEntity.name
+    };
+    
+    liveEntity.properties.forEach(prop => {
+      const fallback = prop.dataType === 'boolean' ? false : '';
+      defaultValues[prop.key] = preservedData?.[prop.key] ?? prop.value ?? fallback;
     });
 
     const form = await formManager.createFormForModal(modal, {
       schema,
-      defaultValues: {
-        name: preservedData?.name ?? liveEntity.name
-      }
+      defaultValues
     });
 
     currentForm = form as unknown as IFormular<IObjectShape>;
@@ -70,6 +93,34 @@ export const createEntitySettingsModal = function(entityId: string): VbsModal {
 
     body.appendChild(nameField.element);
     fieldCleanups.push(nameField.cleanup.destroy);
+
+    // Render property fields dynamically
+    liveEntity.properties.forEach(prop => {
+      let fieldResult;
+      
+      const fieldProps = {
+        fieldName: prop.key,
+        form: form as unknown as IFormular<IObjectShape>,
+        label: prop.label || prop.key,
+      };
+
+      if (prop.dataType === 'boolean' || prop.componentType === 'checkbox') {
+        fieldResult = createFormularCheckbox({ ...fieldProps });
+      } else if (prop.componentType === 'textarea') {
+        fieldResult = createFormularTextarea({ ...fieldProps, placeholder: 'Enter text' });
+      } else if (prop.componentType === 'select') {
+        // Need to know options, maybe from property if available, but fallback to empty for now
+        fieldResult = createFormularDropdown({ 
+          ...fieldProps, 
+          options: [] // To be populated properly if options data exists
+        });
+      } else {
+        fieldResult = createFormularInput({ ...fieldProps, placeholder: `Enter ${prop.label}` });
+      }
+
+      body.appendChild(fieldResult.element);
+      fieldCleanups.push(fieldResult.cleanup.destroy);
+    });
 
     const cancelBtn = createButton({
       variant: 'ghost',
@@ -108,6 +159,13 @@ export const createEntitySettingsModal = function(entityId: string): VbsModal {
         const finalName = data.name || manualName || liveEntity.name;
 
         adapter.updateEntityName(entityId, finalName);
+        
+        const updatedProperties = liveEntity.properties.map(prop => ({
+          ...prop,
+          value: data[prop.key] !== undefined ? data[prop.key] : prop.value
+        }));
+        
+        adapter.updateEntityProperties(entityId, updatedProperties);
 
         fieldCleanups.forEach(fn => fn());
         formManager.cleanupModal(modal);

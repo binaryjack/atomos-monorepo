@@ -10,6 +10,11 @@ import type { LinkFinalizer } from './create-link-finalizer.js';
 import { computeAnchorWorldPos } from './create-link-finalizer.js';
 import { testEdgeHit } from './create-edge-hit-tester.js';
 import { ENTITY_DEFAULT_WIDTH, ENTITY_DEFAULT_HEIGHT } from './entity-defaults.js';
+import { getCanvasAdapter } from './adapters/canvas-adapter.js';
+import { validateTopologicalConnection } from './domain/validate-topological-connection.js';
+import { registry } from './create-signal-registry.js';
+import { GLOBAL_KEY } from './registry-keys.js';
+import type { GlobalConfig } from './types/global-config.types.js';
 
 export interface CanvasEventHandler {
   readonly handleCanvasMouseMove: (event: MouseEvent) => void;
@@ -145,6 +150,46 @@ export const createCanvasEventHandler = function(
     if (linkDrawController.isDrawing()) {
       behaviorManager.updateLinkDrawing(svgCoords);
       linkDrawController.updateTempLink(svgCoords);
+
+      const srcEntityId = linkDrawController.getActiveTempSrcEntityId();
+      if (srcEntityId) {
+        let nearest: { anchorId: string; entityId: string; edge: EdgePosition; dist: number } | undefined;
+        workspaceState.value.entities.forEach((entity, entityId) => {
+          if (entityId === srcEntityId) return;
+          (['top', 'bottom', 'left', 'right'] as EdgePosition[]).forEach(side => {
+            if (!testEdgeHit(entity, side, svgCoords)) return;
+            const pos = computeAnchorWorldPos(workspaceState, entityId, side);
+            const dist = Math.hypot(svgCoords.x - pos.x, svgCoords.y - pos.y);
+            if (!nearest || dist < nearest.dist) {
+              nearest = { anchorId: `${entityId}-anchor-${side}`, entityId, edge: side, dist };
+            }
+          });
+        });
+
+        if (nearest) {
+          const adapter = getCanvasAdapter();
+          const srcEntity = adapter.getEntity(srcEntityId);
+          const dstEntity = adapter.getEntity(nearest.entityId);
+          
+          if (srcEntity && dstEntity) {
+            const allLinks = (adapter.getAllLinks?.() || []) as any[];
+            const globalConfigSig = registry.get<GlobalConfig>(GLOBAL_KEY);
+            const topologyRules = globalConfigSig?.value.topology;
+            
+            const validation = validateTopologicalConnection(
+              srcEntity,
+              dstEntity,
+              allLinks,
+              topologyRules
+            );
+            linkDrawController.setTempLinkValidity(validation.isValid);
+          } else {
+            linkDrawController.setTempLinkValidity(true);
+          }
+        } else {
+          linkDrawController.setTempLinkValidity(true);
+        }
+      }
     }
   };
 

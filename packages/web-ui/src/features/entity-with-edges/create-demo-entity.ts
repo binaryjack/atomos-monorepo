@@ -1,12 +1,14 @@
-﻿import type { DemoEntityProps, DemoEntityResult } from './types/demo-entity.types.js';
+﻿import { createSignal } from '../../core/create-signal.js';
 import type { EntityInstance } from '../../core/types/entity-instance.types.js';
-import type { EdgePosition } from '../edge/types/edge-position.types.js';
 import { createEdge } from '../edge/create-edge.js';
-import { createSignal } from '../../core/create-signal.js';
+import type { EdgePosition } from '../edge/types/edge-position.types.js';
+import { createEntitySettingsModal } from '../modal/create-entity-settings-modal.js';
+import { createCompactEntityContent } from './create-compact-entity-content.js';
 import { createEntityContent } from './create-entity-content.js';
-import { createEntitySelectionRing } from './create-entity-selection-ring.js';
-import { createEntityResizeHandles } from './create-entity-resize-handles.js';
 import { createEntityDragBehavior } from './create-entity-drag-behavior.js';
+import { createEntityResizeHandles } from './create-entity-resize-handles.js';
+import { createEntitySelectionRing } from './create-entity-selection-ring.js';
+import type { DemoEntityProps, DemoEntityResult } from './types/demo-entity.types.js';
 
 const EDGE_THICKNESS = 3 as const;
 
@@ -17,26 +19,51 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
 
   const selected = createSignal(false);
 
-  // --- HTML content inside foreignObject ---
-  const content = createEntityContent({
-    entityStore: props.entityStore,
-    globalConfig:  props.globalConfig,
-    storageProvider: props.storageProvider,
-    onDelete: () => props.workspace.unregisterEntity(props.id),
-    onSettingsClick: () => { /* TODO: open settings panel */ },
-    onHeightChange: (h) => {
-      props.dimensions.set({ width: props.dimensions.value.width, height: h });
-    },
-  });
-  root.appendChild(content.foreignObject);
-  cleanups.push(content.cleanup.destroy);
+  // --- Entity appearance (Rectangle table vs Compact Shape) ---
+  let contentElement: SVGElement;
+  let dragHandleElement: HTMLElement | SVGElement;
+  let updateSize: (w: number, h: number) => void;
+  
+  if (props.shape === 'rectangle' || !props.shape) {
+    const content = createEntityContent({
+      entityStore: props.entityStore,
+      globalConfig: props.globalConfig,
+      storageProvider: props.storageProvider,
+      onDelete: () => props.workspace.unregisterEntity(props.id),
+      onSettingsClick: () => { /* TODO: open settings panel */ },
+      onHeightChange: (h) => {
+        props.dimensions.set({ width: props.dimensions.value.width, height: h });
+      },
+    });
+    contentElement = content.foreignObject;
+    dragHandleElement = content.dragHandle;
+    updateSize = content.updateSize;
+    cleanups.push(content.cleanup.destroy);
+  } else {
+    // For compact shapes (circle, diamond, etc)
+    const content = createCompactEntityContent({
+      shape: props.shape,
+      entitySignal: props.entityStore.signal,
+      onDoubleClick: () => {
+        const modal = createEntitySettingsModal(props.id);
+        document.body.appendChild(modal);
+        modal.open().catch(err => console.error(err));
+      }
+    });
+    contentElement = content.rootElement;
+    dragHandleElement = content.dragHandle;
+    updateSize = content.updateSize;
+    cleanups.push(content.cleanup.destroy);
+  }
+  
+  root.appendChild(contentElement);
 
   // --- Geometry sync ---
   const syncGeometry = (): void => {
     const { x, y } = props.position.value;
     const { width, height } = props.dimensions.value;
     root.setAttribute('transform', `translate(${x},${y})`);
-    content.updateSize(width, height);
+    updateSize(width, height);
     resizeHandles.syncHandles(width, height, selected.value);
     selectionRing.syncRing(width, height, selected.value);
   };
@@ -70,6 +97,7 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
     const edge = createEdge({
       position: side,
       entityId: props.id,
+      shape: props.shape,
       entityPosition: props.position,
       entityDimensions: props.dimensions,
       thickness: EDGE_THICKNESS,
@@ -93,8 +121,8 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
     });
   });
 
-  // --- Drag behavior (attached to header div so it only triggers from header) ---
-  const drag = createEntityDragBehavior(content.dragHandle, props.position, selected, props.workspace);
+  // --- Drag behavior (attached to header div or shape root) ---
+  const drag = createEntityDragBehavior(dragHandleElement, props.position, selected, props.workspace);
   cleanups.push(drag.cleanup);
 
   // Initial render
