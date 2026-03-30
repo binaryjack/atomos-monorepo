@@ -1,6 +1,6 @@
-import type { EditableLabelProps, EditableLabelResult } from './types/editable-label.types.js';
+import type { EditableLabelProps, EditableLabelResult } from './types/editable-label.types.js'
 
-export type { EditableLabelProps, EditableLabelResult };
+export type { EditableLabelProps, EditableLabelResult }
 
 export const createEditableLabel = function(props: EditableLabelProps): EditableLabelResult {
   const cleanups: Array<() => void> = [];
@@ -18,7 +18,7 @@ export const createEditableLabel = function(props: EditableLabelProps): Editable
   span.style.overflow = 'hidden';
   span.style.textOverflow = 'ellipsis';
   span.style.whiteSpace = 'nowrap';
-  span.style.cursor = 'default';
+  span.style.cursor = 'inherit';
   span.style.userSelect = 'none';
   span.style.flex = '1';
   span.style.minWidth = '0';
@@ -47,6 +47,7 @@ export const createEditableLabel = function(props: EditableLabelProps): Editable
     input.style.padding = '0 2px';
     input.style.font = 'inherit';
     input.style.color = '#f1f5f9';
+    input.style.cursor = 'text';
 
     const commit = (): void => {
       if (!editing) return;

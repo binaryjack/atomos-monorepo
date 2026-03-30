@@ -25,6 +25,7 @@ export const createEntityHeader = function(props: EntityHeaderProps): EntityHead
     'border-bottom:1px solid #334155',
     'flex-shrink:0',
     'min-height:36px',
+    'cursor:grab',
   ].join(';');
 
   // Editable label (flex-1)

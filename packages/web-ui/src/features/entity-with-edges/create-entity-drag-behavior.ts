@@ -6,7 +6,7 @@ export interface EntityDragBehaviorResult {
 }
 
 export const createEntityDragBehavior = function(
-  bodyElement: Element,
+  bodyElement: HTMLElement | Element,
   position: Signal<{ x: number; y: number }>,
   selected: Signal<boolean>,
   workspace: WorkspaceManager
@@ -21,6 +21,8 @@ export const createEntityDragBehavior = function(
     const svg = workspace.screenToSvgCoords(me.clientX, me.clientY);
     dragging = true;
     dragStart = { svgX: svg.x, svgY: svg.y, posX: position.value.x, posY: position.value.y };
+    if (bodyElement instanceof HTMLElement) bodyElement.style.cursor = 'grabbing';
+    document.body.style.cursor = 'grabbing';
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
   };
@@ -38,6 +40,8 @@ export const createEntityDragBehavior = function(
   const onMouseUp = (): void => {
     if (!dragging) return;
     dragging = false;
+    if (bodyElement instanceof HTMLElement) bodyElement.style.cursor = '';
+    document.body.style.cursor = '';
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
   };
