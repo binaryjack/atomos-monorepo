@@ -2,6 +2,7 @@ import { createIcon } from '../icon/create-icon.js';
 
 export interface EntityFooterProps {
   readonly onAddProperty: () => void;
+  readonly color?: string | undefined;
 }
 
 export interface EntityFooterResult {
@@ -14,7 +15,7 @@ export const createEntityFooter = function(props: EntityFooterProps): EntityFoot
   footer.style.cssText = [
     'display:flex', 'align-items:center', 'gap:4px',
     'padding:4px 8px',
-    'background:#1e293b',
+    `background:${props.color || '#1e293b'}`,
     'border-top:1px solid #334155',
     'flex-shrink:0',
     'min-height:30px',

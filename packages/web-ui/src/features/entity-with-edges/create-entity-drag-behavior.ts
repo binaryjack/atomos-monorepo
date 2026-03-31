@@ -15,6 +15,21 @@ export const createEntityDragBehavior = function(
   let dragStart = { svgX: 0, svgY: 0, posX: 0, posY: 0 };
 
   const onMouseDown = (e: Event): void => {
+    const target = e.target as HTMLElement;
+    if (target && (
+      target.tagName === 'INPUT' || 
+      target.tagName === 'BUTTON' || 
+      target.tagName === 'SELECT' || 
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable || 
+      target.closest('button') || 
+      target.closest('input') ||
+      target.closest('select') ||
+      target.closest('.no-drag')
+    )) {
+      return; 
+    }
+
     const me = e as MouseEvent;
     me.stopPropagation();
     selected.set(true);

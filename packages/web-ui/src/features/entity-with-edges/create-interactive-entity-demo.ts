@@ -188,20 +188,9 @@ export const createInteractiveEntityDemo = function(workspace: WorkspaceManager)
       }
       case 'EntityMetadataUpdated': {
         const instance = workspace.workspaceState.value.entities.get(event.entityId);
-        if (instance) {
-          // If shape or color change, the simplest reliable way in this DOM architecture
-          // is to recreate the entity instance entirely on the canvas.
-          workspace.unregisterEntity(event.entityId);
-          setTimeout(() => {
-            const domainEntity = canvasAdapter.getEntity(event.entityId);
-            if (domainEntity) {
-              const ep: Entity & { shape?: string, color?: string | undefined } = makeEntityProps(domainEntity.id, domainEntity.name, domainEntity.position.x, domainEntity.position.y, domainEntity.dimensions.width, domainEntity.dimensions.height, domainEntity.properties as any[]);
-              ep.shape = domainEntity.shape as any;
-              ep.color = domainEntity.color;
-              const newInstance = spawnEntity(ep, workspace, { value: DEFAULT_GLOBAL_CONFIG }, canvasAdapter);
-              workspace.registerEntity(newInstance);
-            }
-          }, 0);
+        if (instance && instance.updateMetadata) {
+          // Send the new metadata directly into the existing UI instance
+          instance.updateMetadata(event.metadata);
         }
         break;
       }

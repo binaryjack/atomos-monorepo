@@ -20,56 +20,111 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
   const selected = createSignal(false);
 
   // --- Entity appearance (Rectangle table vs Compact Shape) ---
-  let contentElement: SVGElement;
-  let dragHandleElement: HTMLElement | SVGElement;
-  let updateSize: (w: number, h: number) => void;
-  
-  if (props.shape === 'box' || props.shape === 'rectangle' || !props.shape) {
-    const content = createEntityContent({
-      entityStore: props.entityStore,
-      globalConfig: props.globalConfig,
-      storageProvider: props.storageProvider,
-      color: props.color,
-      onDelete: () => props.workspace.unregisterEntity(props.id),
-      onSettingsClick: () => {
-        const modal = createEntitySettingsModal(props.id);
-        document.body.appendChild(modal);
-        modal.open().catch(err => console.error(err));
-      },
-      onHeightChange: (h) => {
-        props.dimensions.set({ width: props.dimensions.value.width, height: h });
-      },
-    });
-    contentElement = content.foreignObject;
-    dragHandleElement = content.dragHandle;
-    updateSize = content.updateSize;
-    cleanups.push(content.cleanup.destroy);
-  } else {
-    // For compact shapes (cylinder, actor, document, note)
-    const content = createCompactEntityContent({
-      shape: props.shape as any,
-      color: props.color,
-      entitySignal: props.entityStore.signal,
-      onDoubleClick: () => {
-        const modal = createEntitySettingsModal(props.id);
-        document.body.appendChild(modal);
-        modal.open().catch(err => console.error(err));
-      }
-    });
-    contentElement = content.rootElement;
-    dragHandleElement = content.dragHandle;
-    updateSize = content.updateSize;
-    cleanups.push(content.cleanup.destroy);
-  }
-  
-  root.appendChild(contentElement);
+  let contentElement: SVGElement | null = null;
+  let dragHandleElement: HTMLElement | SVGElement | null = null;
+  let updateSize: ((w: number, h: number) => void) | null = null;
+  let contentCleanup: (() => void) | null = null;
+  let currentShape = props.shape;
+  let currentColor = props.color;
 
+  // We need to re-bind drag behavior if content changes
+  let dragCleanup: (() => void) | null = null;
+
+  const buildContent = (shape?: string, color?: string) => {
+    if (contentCleanup) {
+      contentCleanup();
+    }
+    if (contentElement && contentElement.parentNode) {
+      contentElement.parentNode.removeChild(contentElement);
+    }
+    if (dragCleanup) {
+      dragCleanup();
+    }
+
+    if (shape === 'box' || shape === 'rectangle' || !shape) {   
+      const content = createEntityContent({
+        entityStore: props.entityStore,
+        globalConfig: props.globalConfig,
+        storageProvider: props.storageProvider,
+        color: color,
+        onDelete: () => props.workspace.unregisterEntity(props.id),
+        onSettingsClick: () => {
+          const modal = createEntitySettingsModal(props.id);
+          document.body.appendChild(modal);
+          modal.open().catch(err => console.error(err));
+        },
+        onHeightChange: (h) => {
+          props.dimensions.set({ width: props.dimensions.value.width, height: h });
+        },
+      });
+      contentElement = content.foreignObject;
+      dragHandleElement = content.dragHandle;
+      updateSize = content.updateSize;
+      contentCleanup = content.cleanup.destroy;
+    } else {
+      // For compact shapes (cylinder, actor, document, note)
+      const content = createCompactEntityContent({
+        shape: shape as any,
+        color: color,
+        entitySignal: props.entityStore.signal,
+        onDelete: () => props.workspace.unregisterEntity(props.id),
+        onDoubleClick: () => {
+          // Import dynamic to avoid circular bounds if any, but regular import is fine
+          import('./create-entity-drawer.js').then(({ createEntityDrawer }) => {
+            const rect = content.rootElement.getBoundingClientRect();
+            
+            createEntityDrawer(props.id, rect, {
+              entityStore: props.entityStore,
+              globalConfig: props.globalConfig,
+              storageProvider: props.storageProvider,
+              color: color,
+              onDelete: () => props.workspace.unregisterEntity(props.id),
+              onSettingsClick: () => {
+                const modal = createEntitySettingsModal(props.id);
+                document.body.appendChild(modal);
+                modal.open().catch(err => console.error(err));
+              },
+              onHeightChange: (h) => {
+                // Ignore height change constraints inside the floating drawer
+              }
+            });
+          });
+        }
+      });
+      contentElement = content.rootElement;
+      dragHandleElement = content.dragHandle;
+      updateSize = content.updateSize;
+      contentCleanup = content.cleanup.destroy;
+    }
+
+    // Prepend so it goes behind selection rings and resize handles
+    if (root.firstChild) {
+      root.insertBefore(contentElement, root.firstChild);
+    } else {
+      root.appendChild(contentElement);
+    }
+
+    // Reattach drag behavior to new handles
+    const drag = createEntityDragBehavior(dragHandleElement, props.position, selected, props.workspace);
+    dragCleanup = drag.cleanup;
+
+    // Resync geometry
+    const { width, height } = props.dimensions.value;
+    updateSize(width, height);
+  };
+
+  buildContent(currentShape, currentColor);
+
+  cleanups.push(() => {
+    if (contentCleanup) contentCleanup();
+    if (dragCleanup) dragCleanup();
+  });
   // --- Geometry sync ---
   const syncGeometry = (): void => {
     const { x, y } = props.position.value;
     const { width, height } = props.dimensions.value;
     root.setAttribute('transform', `translate(${x},${y})`);
-    updateSize(width, height);
+    if (updateSize) updateSize(width, height);
     resizeHandles.syncHandles(width, height, selected.value);
     selectionRing.syncRing(width, height, selected.value);
   };
@@ -127,9 +182,12 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
     });
   });
 
-  // --- Drag behavior (attached to header div or shape root) ---
-  const drag = createEntityDragBehavior(dragHandleElement, props.position, selected, props.workspace);
-  cleanups.push(drag.cleanup);
+  // --- Drag behavior handles internally attached inside buildContent ---
+
+  cleanups.push(() => {
+    if (contentCleanup) contentCleanup();
+    if (dragCleanup) dragCleanup();
+  });
 
   // Initial render
   syncGeometry();
@@ -140,7 +198,11 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
     position: props.position,
     dimensions: props.dimensions,
     cleanup: () => { cleanups.forEach(fn => fn()); cleanups.length = 0; },
-    notifyAnchorConnected: (_anchorId, _linkId) => { /* visual state: TODO */ }
+    notifyAnchorConnected: (_anchorId, _linkId) => { /* visual state: TODO */ },
+    updateMetadata: (metadata) => {
+      // Rebuild the SVG view dynamically
+      buildContent(metadata.shape, metadata.color);
+    }
   };
 
   return {

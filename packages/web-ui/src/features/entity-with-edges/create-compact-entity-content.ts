@@ -14,6 +14,7 @@ export const createCompactEntityContent = (props: {
   color?: string | undefined;
   entitySignal: Signal<Entity>;
   onDoubleClick: () => void;
+  onDelete?: () => void;
 }): CompactEntityContentResult => {
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   
@@ -29,18 +30,49 @@ export const createCompactEntityContent = (props: {
   textNode.style.fontFamily = 'sans-serif';
   textNode.style.fontWeight = 'bold';
   textNode.style.fontSize = '14px';
-  textNode.style.fill = '#1f2937';
+  textNode.style.fill = '#f1f5f9';
+
+  const propsNode = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  propsNode.setAttribute('text-anchor', 'middle');
+  propsNode.setAttribute('dominant-baseline', 'middle');
+  propsNode.style.pointerEvents = 'none';
+  propsNode.style.userSelect = 'none';
+  propsNode.style.fontFamily = 'sans-serif';
+  propsNode.style.fontSize = '10px';
+  propsNode.style.fill = '#94a3b8'; // Lighter gray for subtext
   
   const updateLabel = () => {
     textNode.textContent = props.entitySignal.value.name || props.shape;
+    const propCount = (props.entitySignal.value.properties || []).length;
+    propsNode.textContent = propCount === 1 ? '1 prop' : `${propCount} props`;
   };
   updateLabel();
   const unsubLabel = props.entitySignal.subscribe(updateLabel);
   
   g.appendChild(textNode);
+  g.appendChild(propsNode);
+
+  // Delete Button (X)
+  const deleteBtnGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  deleteBtnGroup.style.cursor = 'pointer';
+  deleteBtnGroup.innerHTML = `
+    <circle cx="0" cy="0" r="10" fill="#ef4444" stroke="#fff" stroke-width="1.5" />
+    <path d="M-3,-3 L3,3 M3,-3 L-3,3" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+  `;
+  // Add hover effect
+  deleteBtnGroup.onmouseenter = () => { deleteBtnGroup.style.opacity = '0.8'; };
+  deleteBtnGroup.onmouseleave = () => { deleteBtnGroup.style.opacity = '1'; };
+  deleteBtnGroup.onclick = (e) => {
+    e.stopPropagation();
+    if (props.onDelete) props.onDelete();
+  };
+  g.appendChild(deleteBtnGroup);
   
   // Interaction
-  const handleDblClick = () => props.onDoubleClick();
+  const handleDblClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    props.onDoubleClick();
+  };
   g.addEventListener('dblclick', handleDblClick);
   g.style.cursor = 'grab';
 
@@ -54,7 +86,12 @@ export const createCompactEntityContent = (props: {
     shapeWrapper.appendChild(currentShape);
     
     textNode.setAttribute('x', (width / 2).toString());
-    textNode.setAttribute('y', (height / 2).toString());
+    textNode.setAttribute('y', (height / 2 - 8).toString());
+
+    propsNode.setAttribute('x', (width / 2).toString());
+    propsNode.setAttribute('y', (height / 2 + 12).toString());
+
+    deleteBtnGroup.setAttribute('transform', `translate(${width - 10}, 10)`);
   };
 
   return {

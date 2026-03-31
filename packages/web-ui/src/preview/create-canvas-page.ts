@@ -1,4 +1,5 @@
 import { createDAGObserver } from '../core/adapters/dag-observer.js';
+import { getToolboxConfig } from '../core/adapters/toolbox-config-manager.js';
 import { createCanvasViewport } from '../core/create-canvas-viewport.js';
 import { createWorkspaceManager } from '../core/create-workspace-manager.js';
 import { getEntityManager } from '../core/presentation/entity-manager.js';
@@ -94,49 +95,127 @@ export const createCanvasPage = function() {
     'border:1px solid #334155;border-radius:12px;padding:8px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);'
   ].join('');
 
-  const shapes = [
-    { type: 'rectangle', icon: '<rect x="4" y="6" width="16" height="12" rx="2"/>' },
-    { type: 'cylinder', icon: '<ellipse cx="12" cy="7" rx="8" ry="3"/><path d="M4 7v10c0 1.66 3.58 3 8 3s8-1.34 8-3V7"/>' },
-    { type: 'actor', icon: '<circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>' },
-    { type: 'note', icon: '<path d="M4 4h16v12H8l-4 4V4z"/>' },
-    { type: 'diamond', icon: '<polygon points="12 2 22 12 12 22 2 12"/>' }
-  ];
+  const toolboxConfig = getToolboxConfig();
 
-  shapes.forEach(sh => {
-    const btn = document.createElement('button');
-    btn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${sh.icon}</svg>`;
-    btn.title = `Add ${sh.type.charAt(0).toUpperCase() + sh.type.slice(1)}`;
-    btn.style.cssText = [
-      'display:flex;align-items:center;justify-content:center;',
-      'width:40px;height:40px;border:none;background:transparent;',
-      'color:#94a3b8;border-radius:8px;cursor:grab;transition:all 0.2s;'
-    ].join('');
+  toolboxConfig.toolsets.forEach((toolset) => {
+    // Container for the tool or toolset
+    const setContainer = document.createElement('div');
+    setContainer.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;';
+
+    if (toolset.tools.length === 1) {
+      // Just a single tool, act as normal button
+      const sh = toolset.tools[0];
+      if (!sh) return;
+      const btn = document.createElement('button');
+      btn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${sh.icon}</svg>`;
+      btn.title = sh.description || `Add ${sh.name}`;
+      btn.style.cssText = [
+        'display:flex;align-items:center;justify-content:center;',
+        'width:40px;height:40px;border:none;background:transparent;',
+        'color:#94a3b8;border-radius:8px;cursor:grab;transition:all 0.2s;'
+      ].join('');
+      
+      btn.onmouseover = () => { btn.style.background = '#1e293b'; btn.style.color = '#f8fafc'; };
+      btn.onmouseout = () => { btn.style.background = 'transparent'; btn.style.color = '#94a3b8'; };
+      
+      btn.onclick = () => {
+        const v = viewport.state.value;
+        const screenW = window.innerWidth;
+        const screenH = window.innerHeight;
+        const worldX = (screenW / 2 - v.pan.x) / v.zoom;
+        const worldY = (screenH / 2 - v.pan.y) / v.zoom;
+        const id = `entity-${Date.now()}`;
+        getEntityManager().createEntity(id, `New ${sh.name}`, { x: worldX - 100, y: worldY - 50 }, { width: 200, height: sh.shape === 'box' || sh.shape === 'rectangle' ? 100 : 180 }, { shape: sh.shape, color: sh.baseColor });
+      };
+
+      btn.draggable = true;
+      btn.ondragstart = (e) => {
+        if (e.dataTransfer) {
+          e.dataTransfer.setData('application/vbs-shape', sh.shape);
+          e.dataTransfer.setData('application/vbs-color', sh.baseColor);
+          e.dataTransfer.effectAllowed = 'copy';
+        }
+      };
+
+      setContainer.appendChild(btn);
+    } else if (toolset.tools.length > 1) {
+      // Render group icon with a flyout
+      const groupBtn = document.createElement('button');
+      groupBtn.innerHTML = `
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${toolset.icon}</svg>
+        <div style="position:absolute;bottom:2px;right:2px;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:4px solid #64748b;transform:rotate(135deg);"></div>
+      `;
+      groupBtn.title = toolset.name;
+      groupBtn.style.cssText = [
+        'position:relative;display:flex;align-items:center;justify-content:center;',
+        'width:40px;height:40px;border:none;background:transparent;',
+        'color:#94a3b8;border-radius:8px;cursor:pointer;transition:all 0.2s;'
+      ].join('');
+      
+      groupBtn.onmouseover = () => { groupBtn.style.background = '#1e293b'; groupBtn.style.color = '#f8fafc'; };
+      groupBtn.onmouseout = () => { groupBtn.style.background = 'transparent'; groupBtn.style.color = '#94a3b8'; };
+
+      const flyout = document.createElement('div');
+      flyout.style.cssText = [
+        'display:none;position:absolute;left:100%;top:0;margin-left:8px;',
+        'background:rgba(15,23,42,0.95);backdrop-filter:blur(8px);',
+        'border:1px solid #334155;border-radius:12px;padding:8px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);',
+        'flex-direction:row;gap:8px;z-index:30;'
+      ].join('');
+
+      toolset.tools.forEach((sh) => {
+        const btn = document.createElement('button');
+        btn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${sh.icon}</svg>`;
+        btn.title = sh.description || `Add ${sh.name}`;
+        btn.style.cssText = [
+          'display:flex;align-items:center;justify-content:center;',
+          'width:40px;height:40px;border:none;background:transparent;',
+          'color:#94a3b8;border-radius:8px;cursor:grab;transition:all 0.2s;'
+        ].join('');
+        
+        btn.onmouseover = () => { btn.style.background = '#334155'; btn.style.color = '#f8fafc'; };
+        btn.onmouseout = () => { btn.style.background = 'transparent'; btn.style.color = '#94a3b8'; };
+        
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const v = viewport.state.value;
+          const screenW = window.innerWidth;
+          const screenH = window.innerHeight;
+          const worldX = (screenW / 2 - v.pan.x) / v.zoom;
+          const worldY = (screenH / 2 - v.pan.y) / v.zoom;
+          const id = `entity-${Date.now()}`;
+          getEntityManager().createEntity(id, `New ${sh.name}`, { x: worldX - 100, y: worldY - 50 }, { width: 200, height: sh.shape === 'box' || sh.shape === 'rectangle' ? 100 : 180 }, { shape: sh.shape, color: sh.baseColor });
+          flyout.style.display = 'none';
+        };
+
+        btn.draggable = true;
+        btn.ondragstart = (e) => {
+          if (e.dataTransfer) {
+            e.dataTransfer.setData('application/vbs-shape', sh.shape);
+            e.dataTransfer.setData('application/vbs-color', sh.baseColor);
+            e.dataTransfer.effectAllowed = 'copy';
+          }
+        };
+        flyout.appendChild(btn);
+      });
+
+      // Show flyout on hover or click
+      let hideTimeout: any;
+      setContainer.onmouseenter = () => {
+        clearTimeout(hideTimeout);
+        flyout.style.display = 'flex';
+      };
+      setContainer.onmouseleave = () => {
+        hideTimeout = setTimeout(() => {
+          flyout.style.display = 'none';
+        }, 300);
+      };
+
+      setContainer.appendChild(groupBtn);
+      setContainer.appendChild(flyout);
+    }
     
-    // Hover fx
-    btn.onmouseover = () => { btn.style.background = '#1e293b'; btn.style.color = '#f8fafc'; };
-    btn.onmouseout = () => { btn.style.background = 'transparent'; btn.style.color = '#94a3b8'; };
-    
-    // Click to spawn at center
-    btn.onclick = () => {
-      const v = viewport.state.value;
-      const screenW = window.innerWidth;
-      const screenH = window.innerHeight;
-      const worldX = (screenW / 2 - v.pan.x) / v.zoom;
-      const worldY = (screenH / 2 - v.pan.y) / v.zoom;
-      const id = `entity-${Date.now()}`;
-      getEntityManager().createEntity(id, `New ${sh.type}`, { x: worldX - 100, y: worldY - 50 }, { width: 200, height: sh.type === 'rectangle' ? 100 : 180 }, { shape: sh.type });
-    };
-
-    // Make it draggable
-    btn.draggable = true;
-    btn.ondragstart = (e) => {
-      if (e.dataTransfer) {
-        e.dataTransfer.setData('application/vbs-shape', sh.type);
-        e.dataTransfer.effectAllowed = 'copy';
-      }
-    };
-
-    palette.appendChild(btn);
+    palette.appendChild(setContainer);
   });
 
   canvasWrap.appendChild(palette);
@@ -151,6 +230,7 @@ export const createCanvasPage = function() {
     e.preventDefault();
     if (e.dataTransfer) {
       const shapeType = e.dataTransfer.getData('application/vbs-shape');
+      const shapeColor = e.dataTransfer.getData('application/vbs-color');
       if (shapeType) {
         const v = viewport.state.value;
         const rect = canvasWrap.getBoundingClientRect();
@@ -162,7 +242,10 @@ export const createCanvasPage = function() {
         const worldY = (my - v.pan.y) / v.zoom;
         
         const id = `entity-${Date.now()}`;
-        getEntityManager().createEntity(id, `New ${shapeType}`, { x: worldX - 100, y: worldY - 50 }, { width: 200, height: shapeType === 'rectangle' ? 100 : 180 }, { shape: shapeType });
+        const metadata: any = { shape: shapeType };
+        if (shapeColor) metadata.color = shapeColor;
+        
+        getEntityManager().createEntity(id, `New ${shapeType}`, { x: worldX - 100, y: worldY - 50 }, { width: 200, height: shapeType === 'box' || shapeType === 'rectangle' ? 100 : 180 }, metadata);
       }
     }
   };

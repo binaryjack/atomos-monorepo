@@ -1,9 +1,11 @@
 import type { IFormular, IObjectShape } from '@binaryjack/formular.dev'
 import { f } from '@binaryjack/formular.dev'
 import { getCanvasAdapter } from '../../core/adapters/canvas-adapter.js'
+import { getToolboxConfig } from '../../core/adapters/toolbox-config-manager.js'
 import { createFormularManager } from '../../core/create-formular-manager.js'
+import { createSignal } from '../../core/create-signal.js'
 import { createButton } from '../button/create-button.js'
-import { createFormularCheckbox } from '../formular/atoms/create-formular-checkbox.js'
+import { createEntityPropertyRow } from '../entity-with-edges/create-entity-property-row.js'
 import { createFormularDropdown } from '../formular/atoms/create-formular-dropdown.js'
 import { createFormularInput } from '../formular/atoms/create-formular-input.js'
 import { createFormularTextarea } from '../formular/atoms/create-formular-textarea.js'
@@ -51,23 +53,19 @@ export const createEntitySettingsModal = function(entityId: string): VbsModal {
     fieldCleanups.forEach(fn => fn());
     fieldCleanups = [];
 
+    const toolboxConfig = getToolboxConfig();
+    const availableShapes = Array.from(new Set(toolboxConfig.toolsets.flatMap(ts => ts.tools.map(t => t.shape))));
+    const shapeOptions = toolboxConfig.toolsets.flatMap(ts => ts.tools.map(t => ({ label: t.name, value: t.shape })));
+
+    // unique options only based on shape
+    const uniqueShapeOptions = shapeOptions.filter((v, i, a) => a.findIndex(t => (t.value === v.value)) === i);
+
     const schemaShape: Record<string, any> = {
       name: f.string().min(1, 'Name is required'),
       description: f.string().optional(),
-      shape: f.enum(['box', 'cylinder', 'actor', 'document', 'note']).optional(),
+      shape: f.enum(availableShapes as any).optional(),
       color: f.string().optional()
     };
-    
-    // Dynamically build schema based on entity's properties
-    liveEntity.properties.forEach(prop => {
-      if (prop.dataType === 'boolean') {
-        schemaShape[prop.key] = f.boolean();
-      } else if (prop.dataType === 'number' || prop.dataType === 'integer' || prop.dataType === 'float') {
-        schemaShape[prop.key] = f.number();
-      } else {
-        schemaShape[prop.key] = f.string();
-      }
-    });
 
     const schema = f.object(schemaShape);
 
@@ -77,11 +75,6 @@ export const createEntitySettingsModal = function(entityId: string): VbsModal {
       shape: preservedData?.shape ?? liveEntity.shape ?? 'box',
       color: preservedData?.color ?? liveEntity.color ?? '#1e293b'
     };
-    
-    liveEntity.properties.forEach(prop => {
-      const fallback = prop.dataType === 'boolean' ? false : '';
-      defaultValues[prop.key] = preservedData?.[prop.key] ?? prop.value ?? fallback;
-    });
 
     const form = await formManager.createFormForModal(modal, {
       schema,
@@ -108,13 +101,7 @@ export const createEntitySettingsModal = function(entityId: string): VbsModal {
       fieldName: 'shape',
       form: form as unknown as IFormular<IObjectShape>,
       label: 'Shape Type',
-      options: [
-        { label: 'Box', value: 'box' },
-        { label: 'Database / Cylinder', value: 'cylinder' },
-        { label: 'Actor', value: 'actor' },
-        { label: 'Document', value: 'document' },
-        { label: 'Note / Comment', value: 'note' }
-      ]
+      options: uniqueShapeOptions
     });
 
     const colorField = createFormularInput({
@@ -130,46 +117,83 @@ export const createEntitySettingsModal = function(entityId: string): VbsModal {
     body.appendChild(colorField.element);
     
     fieldCleanups.push(
-      nameField.cleanup.destroy, 
+      nameField.cleanup.destroy,
       descField.cleanup.destroy,
       shapeField.cleanup.destroy,
       colorField.cleanup.destroy
     );
 
-    // Render property fields dynamically
-    liveEntity.properties.forEach(prop => {
-      let fieldResult;
-      
-      const fieldProps = {
-        fieldName: prop.key,
-        form: form as unknown as IFormular<IObjectShape>,
-        label: prop.label || prop.key,
-      };
+    const localProperties: any[] = structuredClone(liveEntity.properties as any) || [];
 
-      if (prop.dataType === 'boolean' || prop.componentType === 'checkbox') {
-        fieldResult = createFormularCheckbox({ ...fieldProps });
-      } else if (prop.componentType === 'textarea') {
-        fieldResult = createFormularTextarea({ ...fieldProps, placeholder: 'Enter text' });
-      } else if (prop.componentType === 'select') {
-        // Need to know options, maybe from property if available, but fallback to empty for now
-        fieldResult = createFormularDropdown({ 
-          ...fieldProps, 
-          options: [] // To be populated properly if options data exists
+    const propertiesContainer = document.createElement('div');
+    propertiesContainer.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
+    
+    const propHeader = document.createElement('div');
+    propHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px;';
+    
+    const propTitle = document.createElement('h3');
+    propTitle.textContent = 'Properties';
+    propTitle.style.cssText = 'margin:0; font-size:14px; color:#e2e8f0; font-weight:600;';
+    
+    const addPropBtn = document.createElement('button');
+    addPropBtn.type = 'button';
+    addPropBtn.textContent = '+ Add Property';
+    addPropBtn.style.cssText = 'background:#2563eb; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;';
+    
+    propHeader.appendChild(propTitle);
+    propHeader.appendChild(addPropBtn);
+
+    const scrollBody = document.createElement('div');
+    scrollBody.style.cssText = 'max-height: 200px; overflow-y: auto; overflow-x: hidden; border: 1px solid #334155; border-radius: 4px; padding: 4px; display: flex; flex-direction: column; background: #0f172a;';
+    
+    propertiesContainer.appendChild(propHeader);
+    propertiesContainer.appendChild(scrollBody);
+    body.appendChild(propertiesContainer);
+
+    const renderLocalProperties = () => {
+      scrollBody.innerHTML = '';
+      localProperties.forEach((prop, index) => {
+        const propLabelSignal = createSignal(prop.label || prop.key);
+        const propTypeSignal = createSignal<any>(prop.dataType);
+
+        const rowEl = createEntityPropertyRow({
+          id: prop.key,
+          label: propLabelSignal,
+          dataType: propTypeSignal,
+          availableDataTypes: ['string', 'number', 'boolean', 'integer', 'float', 'datetime', 'select', 'reference'] as any[],
+          onLabelChange: (v) => { prop.label = v; },
+          onDataTypeChange: (v) => { prop.dataType = v; },
+          onSettingsClick: () => { /* no-op in simple settings modal for now */ },
+          onDeleteClick: () => {
+             localProperties.splice(index, 1);
+             renderLocalProperties();
+          }
         });
-      } else {
-        fieldResult = createFormularInput({ ...fieldProps, placeholder: `Enter ${prop.label}` });
-      }
+        scrollBody.appendChild(rowEl.element);
+      });
+    };
 
-      body.appendChild(fieldResult.element);
-      fieldCleanups.push(fieldResult.cleanup.destroy);
+    addPropBtn.addEventListener('click', () => {
+       const key = `prop_${Date.now()}`;
+       localProperties.push({
+         key,
+         label: 'New Property',
+         dataType: 'string',
+         value: ''
+       } as any);
+       renderLocalProperties();
+       setTimeout(() => {
+         scrollBody.scrollTop = scrollBody.scrollHeight;
+       }, 0);
     });
+
+    renderLocalProperties();
 
     const cancelBtn = createButton({
       variant: 'ghost',
       size: 'md',
       children: 'Cancel',
       onClick: () => {
-        fieldCleanups.forEach(fn => fn());
         modal.close();
       }
     });
@@ -181,14 +205,11 @@ export const createEntitySettingsModal = function(entityId: string): VbsModal {
       onClick: async () => {
         if (!currentForm) return;
 
-        let isValid = false;
         try {
-          isValid = await currentForm.validateForm();
+          await currentForm.validateForm();
         } catch (err) {
           console.warn('Validation error:', err);
         }
-
-        if (!isValid) return;
 
         let data: any = {};
         try {
@@ -209,15 +230,8 @@ export const createEntitySettingsModal = function(entityId: string): VbsModal {
 
         adapter.updateEntityMetadata(entityId, { name: finalName, description, shape, color });
         
-        const updatedProperties = liveEntity.properties.map(prop => ({
-          ...prop,
-          value: (currentForm?.getField(prop.key)?.input as any)?.value ?? data[prop.key] ?? prop.value
-        }));
-        
-        adapter.updateEntityProperties(entityId, updatedProperties);
+        adapter.updateEntityProperties(entityId, localProperties);
 
-        fieldCleanups.forEach(fn => fn());
-        formManager.cleanupModal(modal);
         modal.close();
       }
     });

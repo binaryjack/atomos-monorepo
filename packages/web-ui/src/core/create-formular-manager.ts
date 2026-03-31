@@ -93,19 +93,7 @@ export const createFormularManager = function(): FormularManager {
     if (session) {
       console.log(`[FORMULAR-MANAGER] Explicitly cleaning up form ${session.formId}`);
       try {
-        // Call enhanced destroy method from formular.dev with safeguard
-        console.log(`[FORMULAR] Destroying form ${session.formId} and cleaning up ServiceManager`);
-        const form = session.form as any;
-        if (form.destroy) {
-          // Use setTimeout to break potential circular disposal chains
-          setTimeout(() => {
-            try {
-              form.destroy();
-            } catch (nestedError) {
-              console.warn('[FORMULAR] Nested error during form cleanup:', nestedError);
-            }
-          }, 0);
-        }
+        // Omitting form.destroy() to prevent circular IServiceManager call stack exceptions.
         activeFormSessions.delete(modalElement);
         console.log(`[FORMULAR-MANAGER] Successfully cleaned up form ${session.formId}`);
       } catch (error) {

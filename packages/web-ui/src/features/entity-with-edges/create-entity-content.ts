@@ -5,7 +5,6 @@ import { createSignal } from '../../core/create-signal.js'
 import type { IStorageProvider } from '../../core/storage/types/storage-provider.types.js'
 import type { GlobalConfig } from '../../core/types/global-config.types.js'
 import type { Signal } from '../../core/types/signal.types.js'
-import { createEntitySettingsModal } from '../modal/create-entity-settings-modal.js'
 import { createPropertySettingsModal } from '../modal/create-property-settings-modal.js'
 import { createEntityFooter } from './create-entity-footer.js'
 import { createEntityHeader } from './create-entity-header.js'
@@ -37,7 +36,6 @@ export interface EntityContentResult {
 export const createEntityContent = function(props: EntityContentProps): EntityContentResult {
   const cleanups: Array<() => void> = [];
   const store = props.entityStore; // Use the store passed in, don't create a new one!
-  const entitySettingsModal = createEntitySettingsModal(props.entityStore.signal.value.id);
 
   // ─── foreignObject shell ───────────────────────────────────────────────────
   const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
@@ -66,13 +64,13 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
   const labelSignal = createSignal(store.signal.value.name);
 
   const header = createEntityHeader({
+    color: props.color,
     label: labelSignal,
     onLabelChange: (v) => {
       store.updateLabel(v);
     },
     onSettingsClick: () => {
       props.onSettingsClick(store.signal.value.id);
-      entitySettingsModal.open().catch(console.error);
     },
     onDeleteClick:   () => props.onDelete(store.signal.value.id),
   });
@@ -215,6 +213,7 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
 
   // ─── footer ───────────────────────────────────────────────────────────────
   const footer = createEntityFooter({
+    color: props.color,
     onAddProperty: async () => {
       console.log('[ENTITY-CONTENT] Adding new property via clean architecture bridge...');
       const repository = createLegacyPropertyRepositoryBridge({
@@ -248,7 +247,7 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
 
   return {
     foreignObject: fo,
-    dragHandle: header.element,
+    dragHandle: body,
     updateSize,
     cleanup: {
       destroy: () => {

@@ -7,6 +7,7 @@ export interface EntityHeaderProps {
   readonly onLabelChange: (value: string) => void;
   readonly onSettingsClick: () => void;
   readonly onDeleteClick: () => void;
+  readonly color?: string | undefined;
 }
 
 export interface EntityHeaderResult {
@@ -21,7 +22,7 @@ export const createEntityHeader = function(props: EntityHeaderProps): EntityHead
   header.style.cssText = [
     'display:flex', 'align-items:center', 'gap:4px',
     'padding:6px 8px',
-    'background:#1e293b',
+    `background:${props.color || '#1e293b'}`,
     'border-bottom:1px solid #334155',
     'flex-shrink:0',
     'min-height:36px',

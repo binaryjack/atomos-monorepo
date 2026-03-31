@@ -1,7 +1,10 @@
 // Core
 export { createSignal } from './core/create-signal';
 export { createComputed } from './core/create-computed';
+export { getToolboxConfig, setToolboxConfig } from './core/adapters/toolbox-config-manager.js';
+export { defaultToolboxConfig } from './core/default-toolbox.config.js';
 export type { Signal, ComputedSignal } from './core/types/signal.types';
+export type { ToolboxConfiguration, Toolset, ToolboxItem } from './types/toolbox.types.js';
 
 // Base components
 export { vbsElement, type VbsElementProps } from './base/vbs-element';

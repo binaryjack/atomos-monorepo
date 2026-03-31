@@ -7,4 +7,5 @@ export interface EntityInstance {
   readonly dimensions: Signal<{ width: number; height: number }>;
   readonly cleanup: () => void;
   readonly notifyAnchorConnected?: (anchorId: string, linkId: string) => void;
+  readonly updateMetadata?: (metadata: { shape?: string, color?: string, description?: string }) => void;
 }
