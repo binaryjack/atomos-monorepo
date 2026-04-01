@@ -97,4 +97,3 @@ export { createPreviewPage } from './preview/create-preview-page';
 export { createPreviewSection } from './preview/create-preview-section';export * from './components/tabs/index.js';
 
 export * from './features/stepper/index.js';
-export * from './features/schema-canvas/index.js';

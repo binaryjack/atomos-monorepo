@@ -1,6 +1,6 @@
-import { defineAtpStepper } from './features/stepper/atp-stepper/atp-stepper';
-import { createAtpStep } from './features/stepper/create-atp-step';
-import { createAtpStepperTab } from './features/stepper/create-atp-stepper-tab';
+import { defineAtpStepper } from './features/stepper/atp-stepper/atp-stepper.js';
+import { createAtpStep } from './features/stepper/create-atp-step.js';
+import { createAtpStepperTab } from './features/stepper/create-atp-stepper-tab.js';
 
 // Auto-register components required for the stepper
 defineAtpStepper();

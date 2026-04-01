@@ -1,4 +1,4 @@
-import { AtpSchemaCanvas, AtpSchemaNode } from './features/schema-canvas';
+import { AtpSchemaCanvas, AtpSchemaNode } from './features/schema-canvas/index.js';
 
 // Make sure they are defined (they are automatically via their files)
 console.log('Canvas Web Component loaded:', customElements.get('atp-schema-canvas'));

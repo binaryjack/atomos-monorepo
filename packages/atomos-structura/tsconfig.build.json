@@ -1,27 +1,15 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "noEmit": false
   },
   "include": ["src/**/*"],
-  "exclude": ["src/**/*.test.ts", "dist"]
+  "exclude": ["src/**/*.test.ts", "dist"],
+  "references": [
+    { "path": "../atomos-prime" },
+    { "path": "../atomos-structura-core" },
+    { "path": "../formular-dev" }
+  ]
 }

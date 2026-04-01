@@ -38,7 +38,7 @@ export const createAtpStep = () => {
         private contentPart: HTMLDivElement;
 
         static get observedAttributes() {
-            return ['id', 'label', 'is-active', 'is-valid', 'is-visible'];
+            return ['step-id', 'label', 'is-active', 'is-valid', 'is-visible'];
         }
 
         constructor() {
@@ -74,12 +74,12 @@ export const createAtpStep = () => {
         // --- attribute reflection getters & setters ---
 
         get stepId(): number {
-            const id = this.getAttribute('id');
-            return id ? parseInt(id, 10) : -1;
+            const stepId = this.getAttribute('step-id');
+            return stepId ? parseInt(stepId, 10) : -1;
         }
 
         set stepId(value: number) {
-            this.setAttribute('id', value.toString());
+            this.setAttribute('step-id', value.toString());
         }
 
         get label(): string {

@@ -1,5 +1,5 @@
-import type { StepperNavigationRequest } from '../../types/stepper.types';
-import type { AtpStepperDOM } from '../ui/atp-stepper-ui';
+import type { StepperNavigationRequest } from '../../types/stepper.types.js';
+import type { AtpStepperDOM } from '../ui/atp-stepper-ui.js';
 
 export interface AtpStepperHost extends HTMLElement {
     currentStepId: number;
@@ -24,20 +24,44 @@ export const updateActiveStep = (host: AtpStepperHost, dom: AtpStepperDOM) => {
     const steps = getSteps(host);
     const currentId = host.currentStepId;
 
-    steps.forEach(step => {
-        step.isActive = step.stepId === currentId;
+    steps.forEach((step: any) => {
+        const stepIdAttr = step.getAttribute('step-id');
+        const resolvedStepId = stepIdAttr ? parseInt(stepIdAttr, 10) : step.stepId;
+        const isMatch = resolvedStepId === currentId;
+        
+        if (isMatch) {
+            step.setAttribute('is-active', '');
+            if ('isActive' in step) step.isActive = true;
+        } else {
+            step.removeAttribute('is-active');
+            if ('isActive' in step) step.isActive = false;
+        }
     });
 
     // Update matching tabs
     const tabs = Array.from(dom.breadcrumbContainer.querySelectorAll('atp-stepper-tab')) as any[];
     tabs.forEach(tab => {
-        tab.isActive = tab.stepId === currentId;
+        const tabIdAttr = tab.getAttribute('step-id');
+        const resolvedTabId = tabIdAttr ? parseInt(tabIdAttr, 10) : tab.stepId;
+        const isMatch = resolvedTabId === currentId;
+
+        if (isMatch) {
+            tab.setAttribute('is-active', '');
+            if ('isActive' in tab) tab.isActive = true;
+        } else {
+            tab.removeAttribute('is-active');
+            if ('isActive' in tab) tab.isActive = false;
+        }
     });
 };
 
 export const updateFooterState = (host: AtpStepperHost, dom: AtpStepperDOM) => {
     const steps = getSteps(host);
-    const currentIndex = steps.findIndex(step => step.stepId === host.currentStepId);
+    const currentIndex = steps.findIndex((step: any) => {
+        const stepIdAttr = step.getAttribute('step-id');
+        const resolvedStepId = stepIdAttr ? parseInt(stepIdAttr, 10) : step.stepId;
+        return resolvedStepId === host.currentStepId;
+    });
 
     if (currentIndex <= 0) {
         dom.btnBack.setAttribute('disabled', 'true');
@@ -76,8 +100,17 @@ export const renderTabs = (host: AtpStepperHost, dom: AtpStepperDOM) => {
 };
 
 export const handleNavigation = (host: AtpStepperHost, dom: AtpStepperDOM, direction: StepperNavigationRequest) => {
-    const steps = getSteps(host);
-    const currentIndex = steps.findIndex(step => step.stepId === host.currentStepId);
+    const steps = getSteps(host) as any[];
+    const currentIndex = steps.findIndex((step: any) => {
+        const stepIdAttr = step.getAttribute('step-id');
+        const resolvedStepId = stepIdAttr ? parseInt(stepIdAttr, 10) : step.stepId;
+        return resolvedStepId === host.currentStepId;
+    });
+
+    const getResolvedId = (step: any) => {
+        const attr = step.getAttribute('step-id');
+        return attr ? parseInt(attr, 10) : step.stepId;
+    };
 
     if (direction === 'next') {
         if (currentIndex < steps.length - 1) {
@@ -86,10 +119,10 @@ export const handleNavigation = (host: AtpStepperHost, dom: AtpStepperDOM, direc
                 composed: true,
                 detail: {
                     currentStepId: host.currentStepId,
-                    nextStepId: (steps[currentIndex + 1] as any).stepId
+                    nextStepId: getResolvedId(steps[currentIndex + 1])
                 }
             }));
-            host.currentStepId = (steps[currentIndex + 1] as any).stepId;
+            host.currentStepId = getResolvedId(steps[currentIndex + 1]);
         } else if (currentIndex === steps.length - 1) {
             host.dispatchEvent(new CustomEvent('stepper-submit', {
                 bubbles: true,
@@ -98,7 +131,7 @@ export const handleNavigation = (host: AtpStepperHost, dom: AtpStepperDOM, direc
         }
     } else if (direction === 'back') {
         if (currentIndex > 0) {
-            host.currentStepId = (steps[currentIndex - 1] as any).stepId;
+            host.currentStepId = getResolvedId(steps[currentIndex - 1]);
         }
     }
 };

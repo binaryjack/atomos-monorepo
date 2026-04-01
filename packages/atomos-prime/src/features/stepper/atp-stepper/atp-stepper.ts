@@ -1,4 +1,4 @@
-import { createAtpStepperTemplate, attachAtpStepperUI, type AtpStepperDOM } from './ui/atp-stepper-ui';
+import { createAtpStepperTemplate, attachAtpStepperUI, type AtpStepperDOM } from './ui/atp-stepper-ui.js';
 import {
     syncSteps,
     updateActiveStep,
@@ -6,7 +6,7 @@ import {
     handleNavigation,
     handleTabClick,
     type AtpStepperHost
-} from './state/atp-stepper-state';
+} from './state/atp-stepper-state.js';
 
 const template = createAtpStepperTemplate();
 

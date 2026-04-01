@@ -1,4 +1,4 @@
-import { atpStepperStyle } from '../style/atp-stepper-style';
+import { atpStepperStyle } from '../style/atp-stepper-style.js';
 
 export const createAtpStepperTemplate = (): HTMLTemplateElement => {
     const template = document.createElement('template');
