@@ -1,4 +1,4 @@
-﻿// Core
+// Core
 export { createSignal } from './core/create-signal';
 export { createComputed } from './core/create-computed';
 export { createToggleable } from './core/create-toggleable.js';
@@ -97,6 +97,4 @@ export { createPreviewPage } from './preview/create-preview-page';
 export { createPreviewSection } from './preview/create-preview-section';export * from './components/tabs/index.js';
 
 export * from './features/stepper/index.js';
-e
-
-
+export * from './features/schema-canvas/index.js';

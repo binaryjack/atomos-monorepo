@@ -11,7 +11,7 @@ const state = {
     entities: {
         'e1': { id: 'e1', name: 'User', x: 100, y: 100 },
         'e2': { id: 'e2', name: 'Post', x: 350, y: 150 }
-    }
+    } as Record<string, { id: string, name: string, x: number, y: number }>
 };
 
 const renderedNodes = new Map<string, AtpSchemaNode>();
@@ -49,12 +49,13 @@ canvas.addEventListener('atp-node-move', (e: Event) => {
     const { id, x, y } = customEvent.detail;
     
     // Validate we know about this entity
-    if (state.entities[id]) {
+    const entity = state.entities[id];
+    if (entity) {
         // Update State (like calling kernel.updateEntityPosition)
-        state.entities[id].x = x;
-        state.entities[id].y = y;
+        entity.x = x;
+        entity.y = y;
         
-        console.log(\`[State Update] Entity \${id} moved to (\${x}, \${y})\`);
+        console.log(`[State Update] Entity ${id} moved to (${x}, ${y})`);
         
         // Re-sync DOM (like kernel.subscribe() firing)
         // In a real scenario we might re-evaluate everything, but position syncs are cheap.
@@ -65,5 +66,5 @@ canvas.addEventListener('atp-node-move', (e: Event) => {
 canvas.addEventListener('atp-node-select', (e: Event) => {
     const customEvent = e as CustomEvent;
     const { id } = customEvent.detail;
-    console.log(\`[State Update] Entity \${id} selected\`);
+    console.log(`[State Update] Entity ${id} selected`);
 });
