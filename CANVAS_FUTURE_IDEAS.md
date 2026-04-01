@@ -60,10 +60,15 @@ VBE must remain pure vanilla TypeScript (no classes, declarative data) while sea
 2.  Create the Node Type Registry so the host can define custom behaviors and mapping.
 3.  Write documentation/examples on utilizing `useSyncExternalStore` with VBE.
 
-### Phase 4: AI-Agencee DAG Serialization
-*The final mile. Creating the exact data output needed by the DAG Orchestrator.*
-1.  Implement `serializeToDag()` (translates Entities to `lanes` / `barriers` and links to `dependsOn`).
-2.  Implement `parseFromDag()` (translates `DagDefinition` back into VBE coordinates with an auto-layout pass).
+### Phase 4: Universal AST & Multi-Instance Fractal Modeling (Codernic Native)
+*The final mile. Evolving VBE from a single-purpose drawing tool into a universal graph-spec engine.*
+1.  **Agnostic Graph Kernel**: Remove hardcoded DAG or ORM serialization logic. The engine must only emit and consume a pure Visual AST.
+2.  **Fractal Instancing**: Design the system so that `atomos-structura` can be instantiated in multiple contexts simultaneously within Codernic:
+    *   *Instance A (The Orchestrator)*: The high-level DAG workflow.
+    *   *Instance B (Inside Lane 1)*: A Class Schema diagram defining the domain objects.
+    *   *Instance C (Inside Lane 2)*: A Database Schema diagram defining persistence.
+    *   *Instance D (Inside Lane 3)*: A Business Logic/State Machine diagram.
+3.  **The Adapter Layer**: Expose a purely headless API (`graph.getTopologicalSort()`, `graph.getSchema(nodeId)`) so external plugins can serialize the AST into Fastify controllers, Prisma schemas, or AI prompts as needed.
 
 ---
 

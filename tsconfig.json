@@ -25,20 +25,22 @@
     "composite": true,
     "baseUrl": ".",
     "paths": {
-      "@vbs/vbs-mod": ["packages/vbs-mod/src/index.ts"],
-      "@vbs/vbs-style": ["packages/vbs-style/src/index.ts"],
-      "@vbs/web-ui": ["packages/web-ui/src/index.ts"],
-      "@vbs/vbs-mcp": ["packages/vbs-mcp/src/index.ts"],
-      "@vbs/vbs": ["packages/vbs/src/index.ts"]
+      "@atomos/structura-core": ["packages/atomos-structura-core/src/index.ts"],
+      "@atomos/prime-style": ["packages/atomos-prime-style/src/index.ts"],
+      "@atomos/prime": ["packages/atomos-prime/src/index.ts"],
+      "@atomos/structura-mcp": ["packages/atomos-structura-mcp/src/index.ts"],
+      "@atomos/structura": ["packages/atomos-structura/src/index.ts"],
+      "@binaryjack/formular.dev": ["packages/formular-dev/src/index.ts"]
     }
   },
   "include": ["packages/*/src/**/*"],
   "exclude": ["node_modules", "dist", "build"],
   "references": [
-    { "path": "./packages/vbs-mod" },
-    { "path": "./packages/vbs-style" },
-    { "path": "./packages/web-ui" },
-    { "path": "./packages/vbs-mcp" },
-    { "path": "./packages/vbs" }
+    { "path": "./packages/atomos-structura-core" },
+    { "path": "./packages/atomos-prime-style" },
+    { "path": "./packages/atomos-prime" },
+    { "path": "./packages/atomos-structura-mcp" },
+    { "path": "./packages/atomos-structura" },
+    { "path": "./packages/formular-dev" }
   ]
 }
