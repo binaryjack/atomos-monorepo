@@ -23,4 +23,6 @@ function walk(dir) {
     }
   }
 }
+console.log("Starting patch-imports");
 walk('d:/Sources/vbe2/packages/atomos-prime/src');
+console.log("Done");
