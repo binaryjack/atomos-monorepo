@@ -1,37 +1,37 @@
-import { VbsModal } from './vbs-modal.js';
-import { VbsModalHeader } from './vbs-modal-header.js';
-import { VbsModalFooter } from './vbs-modal-footer.js';
+export * from './atp-modal/atp-modal.js';
+export * from './create-atp-modal-header.js';
+export * from './create-atp-modal-footer.js';
 
-// Idempotent registration — safe to import multiple times
-if (!customElements.get('vbs-modal')) {
-  customElements.define('vbs-modal', VbsModal);
-}
-if (!customElements.get('vbs-modal-header')) {
-  customElements.define('vbs-modal-header', VbsModalHeader);
-}
-if (!customElements.get('vbs-modal-footer')) {
-  customElements.define('vbs-modal-footer', VbsModalFooter);
-}
+export * from './create-entity-settings-modal.js';
+export * from './create-link-settings-modal.js';
+export * from './create-modal-animations.js';
+export * from './create-modal-demo.js';
+export * from './create-modal-stack.js';
+export * from './create-property-settings-modal.js';
+export * from './create-validation-badge.js';
+export * from './create-validation-modal.js';
 
-export { VbsModal } from './vbs-modal.js';
-export { VbsModalHeader } from './vbs-modal-header.js';
-export { VbsModalFooter } from './vbs-modal-footer.js';
-
-export type { ModalResult } from './types/modal-result.types.js';
 export type { ModalOptions } from './types/modal-options.types.js';
+export type { ModalResult } from './types/modal-result.types.js';
 export type { ModalStackEntry } from './types/modal-stack-entry.types.js';
 
-// ─── Global type augmentation ─────────────────────────────────────────────
+import { defineAtpModal, AtpModal } from './atp-modal/atp-modal.js';
+import { createAtpModalHeader } from './create-atp-modal-header.js';
+import { createAtpModalFooter } from './create-atp-modal-footer.js';
+
+defineAtpModal();
+createAtpModalHeader();
+createAtpModalFooter();
+
 declare global {
   interface HTMLElementTagNameMap {
-    'vbs-modal': VbsModal;
-    'vbs-modal-header': VbsModalHeader;
-    'vbs-modal-footer': VbsModalFooter;
+    'atp-modal': AtpModal;
+    'atp-modal-header': HTMLElement;
+    'atp-modal-footer': HTMLElement;
   }
-
   interface HTMLElementEventMap {
-    'vbs-modal-opened': CustomEvent<void>;
-    'vbs-modal-closed': CustomEvent<import('./types/modal-result.types.js').ModalResult<unknown>>;
-    'vbs-modal-close-request': CustomEvent<void>;
+    'atp-modal-opened': CustomEvent<void>;
+    'atp-modal-closed': CustomEvent<import('./types/modal-result.types.js').ModalResult<unknown>>;
+    'atp-modal-close-request': CustomEvent<void>;
   }
 }

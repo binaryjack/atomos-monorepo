@@ -21,9 +21,9 @@ export const createModalPage = function() {
   heading.innerHTML = `
     <h1 style="font-size:28px;font-weight:700;color:#f1f5f9;margin:0 0 8px;">Modal</h1>
     <p style="margin:0;color:#94a3b8;font-size:15px;line-height:1.6;">
-      Agnostic &lt;vbs-modal&gt; web component — Shadow DOM, stacking, animations,
+      Agnostic &lt;atp-modal&gt; web component — Shadow DOM, stacking, animations,
       Promise-based <code style="background:#1e293b;padding:1px 5px;border-radius:3px;font-size:13px;">open()</code>
-      + <code style="background:#1e293b;padding:1px 5px;border-radius:3px;font-size:13px;">vbs-modal-closed</code> event.
+      + <code style="background:#1e293b;padding:1px 5px;border-radius:3px;font-size:13px;">atp-modal-closed</code> event.
     </p>
   `;
   inner.appendChild(heading);
@@ -32,7 +32,7 @@ export const createModalPage = function() {
   const demos: Array<{ label: string; desc: string; id: string }> = [
     { label: 'Alert',   id: 'demo-alert',   desc: 'Simple informational modal — OK button or ESC / click-outside to dismiss.' },
     { label: 'Confirm', id: 'demo-confirm', desc: 'Destructive action confirmation with Cancel + Delete buttons. Returns the chosen value.' },
-    { label: 'Form',    id: 'demo-form',    desc: 'Wider modal containing input fields. Uses --vbs-modal-width CSS custom property.' },
+    { label: 'Form',    id: 'demo-form',    desc: 'Wider modal containing input fields. Uses --atp-modal-width CSS custom property.' },
     { label: 'Stacked', id: 'demo-stacked', desc: 'Two modals open simultaneously. ESC and click-outside only affect the top-most one.' },
   ];
 
@@ -52,21 +52,21 @@ export const createModalPage = function() {
     'margin:0',
   ].join(';');
   code.textContent = `<!-- Declarative -->
-<vbs-modal id="my-modal">
-  <vbs-modal-header slot="header">Settings</vbs-modal-header>
+<atp-modal id="my-modal">
+  <atp-modal-header slot="header">Settings</atp-modal-header>
   <p>Any content here — no framework needed.</p>
-  <vbs-modal-footer slot="footer">
+  <atp-modal-footer slot="footer">
     <button onclick="document.getElementById('my-modal').close()">Cancel</button>
     <button onclick="document.getElementById('my-modal').close({ saved: true })">Save</button>
-  </vbs-modal-footer>
-</vbs-modal>
+  </atp-modal-footer>
+</atp-modal>
 
 <!-- Programmatic (returns Promise) -->
 const result = await modal.open<{ saved: boolean }>();
 // result: { value: { saved: true }, cancelled: false }
 
 <!-- CSS custom property -->
-<vbs-modal style="--vbs-modal-width: 640px"> … </vbs-modal>`;
+<atp-modal style="--atp-modal-width: 640px"> … </atp-modal>`;
   usageSection.appendChild(code);
   inner.appendChild(usageSection);
 
@@ -77,10 +77,10 @@ const result = await modal.open<{ saved: boolean }>();
 
   apiGrid.appendChild(apiCard('open<T>(options?)', 'Returns Promise<ModalResult<T>>. Opens the modal, adds it to the z-index stack.'));
   apiGrid.appendChild(apiCard('close(value?)', 'Closes the modal. With a value → { value, cancelled:false }. Without → { value:undefined, cancelled:true }.'));
-  apiGrid.appendChild(apiCard('vbs-modal-opened', 'CustomEvent fired after the open animation completes.'));
-  apiGrid.appendChild(apiCard('vbs-modal-closed', 'CustomEvent fired after close animation. detail: ModalResult<unknown>.'));
-  apiGrid.appendChild(apiCard('vbs-modal-close-request', 'Bubbles up from <vbs-modal-header> close button. VbsModal catches it and calls close().'));
-  apiGrid.appendChild(apiCard('--vbs-modal-width', 'CSS custom property. Default: 480px.'));
+  apiGrid.appendChild(apiCard('atp-modal-opened', 'CustomEvent fired after the open animation completes.'));
+  apiGrid.appendChild(apiCard('atp-modal-closed', 'CustomEvent fired after close animation. detail: ModalResult<unknown>.'));
+  apiGrid.appendChild(apiCard('atp-modal-close-request', 'Bubbles up from <atp-modal-header> close button. AtpModal catches it and calls close().'));
+  apiGrid.appendChild(apiCard('--atp-modal-width', 'CSS custom property. Default: 480px.'));
 
   apiSection.appendChild(apiGrid);
   inner.appendChild(apiSection);

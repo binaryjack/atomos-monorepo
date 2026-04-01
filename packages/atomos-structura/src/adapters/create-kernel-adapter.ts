@@ -1,5 +1,6 @@
+import type { DomainEntity, DomainLink, EntityManager } from '@atomos/prime';
+import type { Cardinality, RenderType } from '@atomos/structura-core';
 import type { SchemaGraphKernel } from '../core/create-schema-graph-kernel.js';
-import type { EntityManager } from '@atomos/prime';
 
 /**
  * Creates a two-way synchronization bridge between the headless SchemaGraphKernel
@@ -86,13 +87,22 @@ export const createKernelAdapter = (kernel: SchemaGraphKernel, entityManager: En
         syncingToKernel = true;
 
         switch (event.type) {
-            case 'EntityCreated':
+            case 'EntityCreated': {
+                const ent: DomainEntity = event.entity;
                 kernel.addEntity({
-                    ...event.entity,
-                    nodeType: event.entity.metadata?.shape || 'default',
-                    properties: event.entity.properties || []
+                    id: ent.id,
+                    code: ent.id,
+                    name: ent.name,
+                    nodeType: ent.shape || 'default',
+                    properties: [...(ent.properties || [])],
+                    position: ent.position,
+                    dimensions: ent.dimensions,
+                    edges: [],
+                    createdAt: ent.createdAt,
+                    updatedAt: ent.updatedAt
                 });
                 break;
+            }                break;
             case 'EntityMoved':
                 const movedEnt = entityManager.getEntity(event.entityId);
                 if (movedEnt) {
@@ -114,9 +124,9 @@ export const createKernelAdapter = (kernel: SchemaGraphKernel, entityManager: En
                         rightEntityId: targetId,
                         leftAnchorId: event.link.sourceAnchorId,
                         rightAnchorId: event.link.targetAnchorId,
-                        leftCardinality: '1',
-                        rightCardinality: '1',
-                        renderType: 'linear'
+                        leftCardinality: '1' as Cardinality,
+                        rightCardinality: '1' as Cardinality,
+                        renderType: 'linear' as RenderType
                     });
                 } else {
                     console.warn(`Kernel Rejected Link: ${sourceId} -> ${targetId}`);
@@ -156,20 +166,31 @@ export const createKernelAdapter = (kernel: SchemaGraphKernel, entityManager: En
     } 
     // And populate Kernel if UI has pre-existing cache
     else if (entityManager.getAllEntities().length > 0) {
-       entityManager.getAllEntities().forEach(e => {
-           kernel.addEntity({ ...e, nodeType: (e as any).metadata?.shape || 'default', properties: e.properties || [] } as any)
+       entityManager.getAllEntities().forEach((e: DomainEntity) => {
+           kernel.addEntity({
+               id: e.id,
+               code: e.id,
+               name: e.name,
+               nodeType: e.shape || 'default',
+               properties: [...(e.properties || [])],
+               position: e.position,
+               dimensions: e.dimensions,
+               edges: [],
+               createdAt: e.createdAt,
+               updatedAt: e.updatedAt
+           });
        });
-       entityManager.getAllLinks().forEach(l => {
-           kernel.addLink({ 
-               id: l.id, 
-               leftEntityId: l.sourceEntityId, 
-               rightEntityId: l.targetEntityId, 
-               leftAnchorId: l.sourceAnchorId, 
-               rightAnchorId: l.targetAnchorId, 
-               leftCardinality: 'one', 
-               rightCardinality: 'one', 
-               renderType: 'solid' 
-           } as any);
+       entityManager.getAllLinks().forEach((l: DomainLink) => {
+           kernel.addLink({
+               id: l.id,
+               leftEntityId: l.sourceEntityId,
+               rightEntityId: l.targetEntityId,
+               leftAnchorId: l.sourceAnchorId,
+               rightAnchorId: l.targetAnchorId,
+               leftCardinality: '1' as Cardinality,
+               rightCardinality: '1' as Cardinality,
+               renderType: 'linear' as RenderType
+           });
        });
     }
 

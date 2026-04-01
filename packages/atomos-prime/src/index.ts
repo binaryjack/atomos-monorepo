@@ -13,6 +13,7 @@ export type { Signal, ComputedSignal } from './core/types/signal.types';
 export type { ToolboxConfiguration, Toolset, ToolboxItem } from './types/toolbox.types.js';
 
 export { getEntityManager, createEntityManager, type EntityManager } from './core/presentation/entity-manager.js';
+export type { DomainEntity, DomainLink, EntityPosition, EntityDimensions } from './core/domain/entity-aggregate.js';
 // Base components
 export { vbsElement, type VbsElementProps } from './base/vbs-element';
 export { createVbsCanvas, type VbsCanvasProps } from './components/vbs-canvas';

@@ -6,7 +6,7 @@ import { createFormularTextarea } from '../formular/atoms/create-formular-textar
 import '../formular/index.js';
 import './index.js';
 import type { ModalResult } from './types/modal-result.types.js';
-import type { VbsModal } from './vbs-modal.js';
+import type { AtpModal } from './atp-modal/atp-modal.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -33,10 +33,10 @@ const triggerBtn = (label: string, onClick: () => void): HTMLButtonElement =>
 
 // ─── Alert modal ─────────────────────────────────────────────────────────────
 
-const buildAlertModal = (): VbsModal => {
-  const modal = document.createElement('vbs-modal') as VbsModal;
+const buildAlertModal = (): AtpModal => {
+  const modal = document.createElement('atp-modal') as AtpModal;
 
-  const header = document.createElement('vbs-modal-header');
+  const header = document.createElement('atp-modal-header');
   header.textContent = 'Information';
   header.setAttribute('slot', 'header');
 
@@ -44,7 +44,7 @@ const buildAlertModal = (): VbsModal => {
   body.textContent = 'This is an agnostic alert modal. Click outside, press ESC, or click OK to close.';
   body.style.cssText = 'margin:0;color:#cbd5e1;';
 
-  const footer = document.createElement('vbs-modal-footer');
+  const footer = document.createElement('atp-modal-footer');
   footer.setAttribute('slot', 'footer');
   footer.appendChild(btn('OK', 'primary', () => modal.close('ok')));
 
@@ -57,10 +57,10 @@ const buildAlertModal = (): VbsModal => {
 
 // ─── Confirm modal ───────────────────────────────────────────────────────────
 
-const buildConfirmModal = (): VbsModal => {
-  const modal = document.createElement('vbs-modal') as VbsModal;
+const buildConfirmModal = (): AtpModal => {
+  const modal = document.createElement('atp-modal') as AtpModal;
 
-  const header = document.createElement('vbs-modal-header');
+  const header = document.createElement('atp-modal-header');
   header.textContent = 'Confirm Action';
   header.setAttribute('slot', 'header');
 
@@ -70,7 +70,7 @@ const buildConfirmModal = (): VbsModal => {
     <p style="margin:0;color:#94a3b8;font-size:13px;">This action cannot be undone. All associated links will also be removed.</p>
   `;
 
-  const footer = document.createElement('vbs-modal-footer');
+  const footer = document.createElement('atp-modal-footer');
   footer.setAttribute('slot', 'footer');
   footer.appendChild(btn('Cancel',  'ghost',  () => modal.close()));
   footer.appendChild(btn('Delete',  'danger',  () => modal.close('confirmed')));
@@ -84,11 +84,11 @@ const buildConfirmModal = (): VbsModal => {
 
 // ─── Form modal ──────────────────────────────────────────────────────────────
 
-const buildFormModal = (): VbsModal => {
-  const modal = document.createElement('vbs-modal') as VbsModal;
-  modal.style.setProperty('--vbs-modal-width', '520px');
+const buildFormModal = (): AtpModal => {
+  const modal = document.createElement('atp-modal') as AtpModal;
+  modal.style.setProperty('--atp-modal-width', '520px');
 
-  const header = document.createElement('vbs-modal-header');
+  const header = document.createElement('atp-modal-header');
   header.textContent = 'Edit Entity';
   header.setAttribute('slot', 'header');
 
@@ -99,7 +99,7 @@ const buildFormModal = (): VbsModal => {
   let doSave: (() => void) | null = null;
   let doReset: (() => void) | null = null;
 
-  const footer = document.createElement('vbs-modal-footer');
+  const footer = document.createElement('atp-modal-footer');
   footer.setAttribute('slot', 'footer');
   footer.appendChild(btn('Cancel', 'ghost', () => { doReset?.(); modal.close(); }));
   footer.appendChild(btn('Save', 'primary', () => { doSave?.(); }));
@@ -172,10 +172,10 @@ const buildFormModal = (): VbsModal => {
 
 // ─── Stacked second modal ─────────────────────────────────────────────────────
 
-const buildStackedModal = (): VbsModal => {
-  const inner = document.createElement('vbs-modal') as VbsModal;
+const buildStackedModal = (): AtpModal => {
+  const inner = document.createElement('atp-modal') as AtpModal;
 
-  const header = document.createElement('vbs-modal-header');
+  const header = document.createElement('atp-modal-header');
   header.textContent = 'Inner Modal (stacked)';
   header.setAttribute('slot', 'header');
 
@@ -183,7 +183,7 @@ const buildStackedModal = (): VbsModal => {
   body.textContent = 'I am a second modal stacked on top. Press ESC or click outside — only I close.';
   body.style.cssText = 'margin:0;color:#cbd5e1;';
 
-  const footer = document.createElement('vbs-modal-footer');
+  const footer = document.createElement('atp-modal-footer');
   footer.setAttribute('slot', 'footer');
   footer.appendChild(btn('Close inner', 'secondary', () => inner.close('inner-closed')));
 
@@ -194,10 +194,10 @@ const buildStackedModal = (): VbsModal => {
   return inner;
 };
 
-const buildStackingModal = (innerModal: VbsModal): VbsModal => {
-  const outer = document.createElement('vbs-modal') as VbsModal;
+const buildStackingModal = (innerModal: AtpModal): AtpModal => {
+  const outer = document.createElement('atp-modal') as AtpModal;
 
-  const header = document.createElement('vbs-modal-header');
+  const header = document.createElement('atp-modal-header');
   header.textContent = 'Outer Modal';
   header.setAttribute('slot', 'header');
 
@@ -222,7 +222,7 @@ const buildStackingModal = (innerModal: VbsModal): VbsModal => {
   body.appendChild(openInnerBtn);
   body.appendChild(resultMsg);
 
-  const footer = document.createElement('vbs-modal-footer');
+  const footer = document.createElement('atp-modal-footer');
   footer.setAttribute('slot', 'footer');
   footer.appendChild(btn('Close outer', 'ghost', () => outer.close()));
 

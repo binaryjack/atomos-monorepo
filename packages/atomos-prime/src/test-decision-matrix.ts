@@ -1,5 +1,5 @@
 import { createDecisionMatrix } from './features/decision-matrix/create-decision-matrix.js';
-import type { DecisionMatrixCriterion, DecisionMatrixOption } from './features/decision-matrix/create-decision-matrix.js';
+import type { DecisionMatrixCriterion, DecisionMatrixOption } from './features/decision-matrix/index.js';
 
 const app = document.getElementById('app');
 

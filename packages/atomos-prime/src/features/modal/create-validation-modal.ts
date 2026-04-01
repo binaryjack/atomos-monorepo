@@ -5,7 +5,7 @@ import { createButton } from '../button/create-button.js';
 import { createFormularCheckbox } from '../formular/atoms/create-formular-checkbox.js';
 import { createFormularInput } from '../formular/atoms/create-formular-input.js';
 import './index.js';
-import type { VbsModal } from './vbs-modal.js';
+import type { AtpModal } from './atp-modal/atp-modal.js';
 
 export interface ValidationModalProps {
   readonly propertyKey: string;
@@ -14,22 +14,22 @@ export interface ValidationModalProps {
 }
 
 export interface ValidationModalResult {
-  readonly modal: VbsModal;
+  readonly modal: AtpModal;
   readonly open: () => Promise<IValidationOptions | null>;
 }
 
 export const createValidationModal = function(
   props: ValidationModalProps
 ): ValidationModalResult {
-  const modal = document.createElement('vbs-modal') as VbsModal;
-  modal.style.setProperty('--vbs-modal-width', '520px');
+  const modal = document.createElement('atp-modal') as AtpModal;
+  modal.style.setProperty('--atp-modal-width', '520px');
 
   const open = async (): Promise<IValidationOptions | null> => {
     // Clear modal
     modal.innerHTML = '';
 
     // Header
-    const header = document.createElement('vbs-modal-header');
+    const header = document.createElement('atp-modal-header');
     header.textContent = `Validation: ${props.propertyKey}`;
     header.setAttribute('slot', 'header');
 
@@ -173,7 +173,7 @@ export const createValidationModal = function(
     }
 
     // Footer
-    const footer = document.createElement('vbs-modal-footer');
+    const footer = document.createElement('atp-modal-footer');
     footer.setAttribute('slot', 'footer');
 
     // Wire up buttons definitions

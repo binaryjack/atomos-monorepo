@@ -14,8 +14,7 @@
       "@binaryjack/formular.dev": "/formular-dev/dist/formular-dev.es.js",
       "@atomos/structura-core": "/atomos-structura-core/dist/index.js",
       "@atomos/prime-style": "/atomos-prime-style/dist/index.js",
-      "@atomos/structura-core": "/atomos-structura-core/dist/index.js",
-      "@atomos/prime-style": "/atomos-prime-style/dist/index.js"
+      "@atomos/structura": "/atomos-structura/dist/index.js"
     }
   }
   </script>
@@ -26,17 +25,32 @@
     <a href="preview.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background=''">Components</a>
     <a href="canvas.html" style="color:#38bdf8;text-decoration:none;font-weight:500;padding:4px 10px;border-radius:6px;background:#0f2744;">Canvas</a>
     <a href="modal.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background=''">Modal</a>
-    <a href="formular.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background=''">Formular</a> <a href="test-stepper.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background=''">Stepper</a> <a href="test-schema-canvas.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background=''">Schema Canvas</a>
+    <a href="formular.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background=''">Formular</a> <a href="test-stepper.html" style="color:#94a3b8;text-decoration:none;padding:4px 10px;border-radius:6px;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background=''">Stepper</a>
   </nav>
   <div id="canvas-root"></div>
   <script type="module">
     import { createCanvasPage } from '/atomos-prime/dist/preview/create-canvas-page.js';
+    import { getEntityManager } from '/atomos-prime/dist/index.js';
+    import { createSchemaGraphKernel, createKernelAdapter } from '/atomos-structura/dist/index.js';
 
-    console.log('🚀 Starting original canvas with Redux persistence');
+    console.log('🚀 Starting canvas with Kernel bridge');
     const page = createCanvasPage();
     document.getElementById('canvas-root').appendChild(page.element);
 
-    window.addEventListener('beforeunload', () => page.cleanup.destroy());
+    // Boot the headless schema kernel
+    const kernel = createSchemaGraphKernel();
+
+    // Wire the kernel to the existing UI EntityManager (non-breaking bridge)
+    const bridge = createKernelAdapter(kernel, getEntityManager());
+
+    // Expose for console / DevTools debugging
+    window.__kernel = kernel;
+    window.__bridge = bridge;
+
+    window.addEventListener('beforeunload', () => {
+      bridge.destroy();
+      page.cleanup.destroy();
+    });
   </script>
 </body>
 </html>

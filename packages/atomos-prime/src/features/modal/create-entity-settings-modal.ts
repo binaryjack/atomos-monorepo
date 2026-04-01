@@ -13,15 +13,15 @@ import { createFormularTextarea } from '../formular/atoms/create-formular-textar
 import './index.js'
 import type { ModalOptions } from './types/modal-options.types.js'
 import type { ModalResult } from './types/modal-result.types.js'
-import type { VbsModal } from './vbs-modal.js'
+import type { AtpModal } from './atp-modal/atp-modal.js'
 
-export const createEntitySettingsModal = function(entityId: string): VbsModal {
+export const createEntitySettingsModal = function(entityId: string): AtpModal {
   const adapter = getCanvasAdapter();
   const initialEntity = adapter.getEntity(entityId);
   if (!initialEntity) throw new Error(`Entity ${entityId} not found`);
 
-  const modal = document.createElement('vbs-modal') as VbsModal;
-  modal.style.setProperty('--vbs-modal-width', '480px');
+  const modal = document.createElement('atp-modal') as AtpModal;
+  modal.style.setProperty('--atp-modal-width', '480px');
 
   let isInitialized = false;
   let currentForm: IFormular<IObjectShape> | null = null;
@@ -29,14 +29,14 @@ export const createEntitySettingsModal = function(entityId: string): VbsModal {
 
   const formManager = createFormularManager();
 
-  const header = document.createElement('vbs-modal-header');
+  const header = document.createElement('atp-modal-header');
   header.textContent = `Entity Settings`;
   header.setAttribute('slot', 'header');
 
   const body = document.createElement('div');
   body.className = 'flex flex-col gap-4 p-4';
 
-  const footer = document.createElement('vbs-modal-footer');
+  const footer = document.createElement('atp-modal-footer');
   footer.setAttribute('slot', 'footer');
 
   modal.appendChild(header);
@@ -320,7 +320,7 @@ export const createEntitySettingsModal = function(entityId: string): VbsModal {
     return originalOpen(options);
   };
 
-  modal.addEventListener('vbs-modal-closed', () => {
+  modal.addEventListener('atp-modal-closed', () => {
     formManager.cleanupModal(modal);
     fieldCleanups.forEach(fn => fn());
     fieldCleanups = [];

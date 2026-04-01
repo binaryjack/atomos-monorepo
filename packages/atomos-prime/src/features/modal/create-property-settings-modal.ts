@@ -13,7 +13,7 @@ import { createValidationModal } from './create-validation-modal.js'
 import './index.js'
 import type { ModalOptions } from './types/modal-options.types.js'
 import type { ModalResult } from './types/modal-result.types.js'
-import type { VbsModal } from './vbs-modal.js'
+import type { AtpModal } from './atp-modal/atp-modal.js'
 
 export interface PropertySettingsModalProps {
   readonly entityId: string;
@@ -22,12 +22,12 @@ export interface PropertySettingsModalProps {
 
 export const createPropertySettingsModal = function(
   props: PropertySettingsModalProps
-): VbsModal {
+): AtpModal {
   const initialProperty = selectPropertyByKey(props.entityId, props.propertyKey);
   if (!initialProperty) throw new Error(`Property ${props.propertyKey} not found`);
 
-  const modal = document.createElement('vbs-modal') as VbsModal;
-  modal.style.setProperty('--vbs-modal-width', '480px');
+  const modal = document.createElement('atp-modal') as AtpModal;
+  modal.style.setProperty('--atp-modal-width', '480px');
 
   let currentValidation = initialProperty.validation;
   let currentValue: unknown = initialProperty.value ?? '';
@@ -39,7 +39,7 @@ export const createPropertySettingsModal = function(
   const formManager = createFormularManager();
 
   // Header
-  const header = document.createElement('vbs-modal-header');
+  const header = document.createElement('atp-modal-header');
   header.textContent = `Property: ${initialProperty.label}`;
   header.setAttribute('slot', 'header');
 
@@ -48,7 +48,7 @@ export const createPropertySettingsModal = function(
   body.className = 'flex flex-col gap-4 p-4';
 
   // Footer - initially empty, will be populated on first open
-  const footer = document.createElement('vbs-modal-footer');
+  const footer = document.createElement('atp-modal-footer');
   footer.setAttribute('slot', 'footer');
 
   // Set up modal structure immediately
@@ -409,7 +409,7 @@ export const createPropertySettingsModal = function(
   };
 
   // Ensure DOM is completely clean after animation finishes
-  modal.addEventListener('vbs-modal-closed', () => {
+  modal.addEventListener('atp-modal-closed', () => {
     if (modal.parentElement) {
       modal.parentElement.removeChild(modal);
     }
