@@ -3,7 +3,7 @@ import { datePickerStyle } from '../style/atp-date-picker-style.js';
 export const createAtpDatePickerTemplate = (): HTMLTemplateElement => {
     const template = document.createElement('template');
     template.innerHTML = `
-        <style>\${datePickerStyle}</style>
+        <style>${datePickerStyle}</style>
         <div class="dp-wrapper" id="wrapper">
             <div class="dp-input-row" id="input-row">
                 <input type="text" id="input" class="dp-input" readonly />

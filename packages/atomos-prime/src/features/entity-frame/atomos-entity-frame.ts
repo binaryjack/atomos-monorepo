@@ -4,32 +4,69 @@ template.innerHTML = `
   :host {
     display: block;
     width: var(--frame-width, 200px);
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    background: var(--vbs-bg-panel);
+    border: 1px solid var(--vbs-border);
+    border-radius: var(--vbs-radius);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
     font-family: sans-serif;
     position: absolute;
     user-select: none;
+    color: var(--vbs-text-primary);
   }
+  
+  /* Spotlight Border variables set by JS */
+  :host(.spotlight-active) {
+    border: 1px solid transparent;
+    background: linear-gradient(var(--vbs-bg-panel), var(--vbs-bg-panel)) padding-box,
+                var(--vbs-border) border-box;
+    z-index: 100;
+  }
+  
+  :host(.spotlight-active)::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: radial-gradient(
+      150px circle at var(--mouse-x, 0%) var(--mouse-y, 0%),
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(59, 130, 246, 1) 10%,
+      rgba(59, 130, 246, 0.2) 40%,
+      transparent 60%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+    pointer-events: none;
+  }
+  
+  :host(.spotlight-active:hover)::before {
+    opacity: 1;
+  }
+  
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 8px;
-    background: #f3f4f6;
-    border-bottom: 1px solid #d1d5db;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--vbs-border);
     cursor: move;
-    border-radius: 4px 4px 0 0;
+    border-radius: var(--vbs-radius) var(--vbs-radius) 0 0;
   }
   .title {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 13px;
     cursor: pointer;
+    color: var(--vbs-text-primary);
   }
   .subtitle {
     font-size: 11px;
-    color: #6b7280;
+    color: var(--vbs-text-secondary);
     margin-left: 8px;
   }
   .toggle {
@@ -37,6 +74,7 @@ template.innerHTML = `
     border: none;
     cursor: pointer;
     font-size: 12px;
+    color: var(--vbs-text-secondary);
   }
   .body {
     padding: 8px;
@@ -115,12 +153,25 @@ export class AtomosEntityFrame extends HTMLElement {
     this._updateSubtitle();
     this._updateToggle();
     this.style.setProperty('--frame-width', this.width + 'px');
+    
+    // Add spotlight effect class and listener
+    this.classList.add('spotlight-active');
+    this.addEventListener('mousemove', this._onMouseMove);
   }
 
   disconnectedCallback() {
     this.dom.toggle.removeEventListener('click', this._onToggleClick);
     this.dom.title.removeEventListener('click', this._onTitleClick);
+    this.removeEventListener('mousemove', this._onMouseMove);
   }
+
+  private _onMouseMove = (e: MouseEvent) => {
+    const rect = this.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    this.style.setProperty('--mouse-x', `${x}px`);
+    this.style.setProperty('--mouse-y', `${y}px`);
+  };
 
   attributeChangedCallback(name: string, oldVal: string, newVal: string) {
     if (oldVal === newVal) return;

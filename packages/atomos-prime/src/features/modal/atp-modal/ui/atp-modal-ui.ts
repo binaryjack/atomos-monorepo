@@ -3,7 +3,7 @@ import { atpModalStyle } from '../style/atp-modal.style.js';
 export const createAtpModalTemplate = (): HTMLTemplateElement => {
     const template = document.createElement('template');
     template.innerHTML = `
-        <style>\${atpModalStyle}</style>
+        <style>${atpModalStyle}</style>
         <div class="backdrop" part="backdrop"></div>
         <div class="wrapper" part="wrapper">
           <div class="dialog" role="dialog" aria-modal="true" part="dialog">

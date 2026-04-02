@@ -166,6 +166,7 @@ export const createKernelAdapter = (kernel: SchemaGraphKernel, entityManager: En
     } 
     // And populate Kernel if UI has pre-existing cache
     else if (entityManager.getAllEntities().length > 0) {
+       syncingToKernel = true;
        entityManager.getAllEntities().forEach((e: DomainEntity) => {
            kernel.addEntity({
                id: e.id,
@@ -192,6 +193,7 @@ export const createKernelAdapter = (kernel: SchemaGraphKernel, entityManager: En
                renderType: 'linear' as RenderType
            });
        });
+       syncingToKernel = false;
     }
 
     return Object.freeze({

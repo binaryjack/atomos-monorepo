@@ -5,6 +5,7 @@ import { createLinkDrawController } from './create-link-draw-controller.js';
 import { createLinkFinalizer } from './create-link-finalizer.js';
 import { createInteractiveBehaviorManager } from './interactive-behavior-manager.js';
 import { createLinkManager } from './link-manager.js';
+import { injectDesignSystemTokens } from './presentation/design-system.js';
 import type { EntitySpawnFactory } from './types/entity-spawn-factory.types.js';
 import type { WorkspaceManager } from './types/workspace-manager.types.js';
 import type { WorkspaceState } from './types/workspace-state.types.js';
@@ -13,6 +14,7 @@ export const createWorkspaceManager = function(
   svgContainer: SVGSVGElement,
   contentRoot: SVGElement = svgContainer
 ): WorkspaceManager {
+  injectDesignSystemTokens();
   const behaviorManager  = createInteractiveBehaviorManager();
   const linkManager      = createLinkManager();
   const transformer      = createCoordinateTransformer(svgContainer, contentRoot);
