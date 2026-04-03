@@ -5,16 +5,14 @@ template.innerHTML = `
     display: none;
     width: 100%;
     height: 100%;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
     animation: fadeIn 0.2s ease-in-out;
   }
-  
-  :host([active]) {
-    display: block;
-  }
 
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  :host([active]) {
+    display: flex;
   }
 </style>
 <slot></slot>

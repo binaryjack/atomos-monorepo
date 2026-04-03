@@ -28,10 +28,11 @@ template.innerHTML = `
 
   .tab-panels {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
     position: relative;
     display: flex;
     flex-direction: column;
+    min-height: 0;
   }
 </style>
 <div class="tab-list" role="tablist">

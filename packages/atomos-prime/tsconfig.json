@@ -10,7 +10,6 @@
   "exclude": ["src/**/*.test.ts", "dist"],
   "references": [
     { "path": "../atomos-structura-core" },
-    { "path": "../atomos-prime-style" },
-    { "path": "../formular-dev" }
+    { "path": "../atomos-prime-style" }
   ]
 }

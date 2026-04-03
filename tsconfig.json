@@ -29,8 +29,7 @@
       "@atomos/prime-style": ["packages/atomos-prime-style/src/index.ts"],
       "@atomos/prime": ["packages/atomos-prime/src/index.ts"],
       "@atomos/structura-mcp": ["packages/atomos-structura-mcp/src/index.ts"],
-      "@atomos/structura": ["packages/atomos-structura/src/index.ts"],
-      "@binaryjack/formular.dev": ["packages/formular-dev/src/index.ts"]
+      "@atomos/structura": ["packages/atomos-structura/src/index.ts"]
     }
   },
   "include": ["packages/*/src/**/*"],
@@ -40,7 +39,6 @@
     { "path": "./packages/atomos-prime-style" },
     { "path": "./packages/atomos-prime" },
     { "path": "./packages/atomos-structura-mcp" },
-    { "path": "./packages/atomos-structura" },
-    { "path": "./packages/formular-dev" }
+    { "path": "./packages/atomos-structura" }
   ]
 }

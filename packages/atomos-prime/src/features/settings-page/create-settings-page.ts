@@ -1,8 +1,8 @@
-import { defaultToolboxConfig } from '../../core/default-toolbox.config.js';
-import { createButton } from '../button/create-button.js';
-import { createVisualEditorTree } from './create-settings-tree.js';
-import { createDecisionMatrix } from '../decision-matrix/create-decision-matrix.js';
-import type { SettingsPageProps, SettingsPageResult, AppSettings } from './types/settings-page.types.js';
+import { defaultToolboxConfig } from '../../core/default-toolbox.config.js'
+import { createButton } from '../button/create-button.js'
+import { createDecisionMatrix } from '../decision-matrix/create-decision-matrix.js'
+import { createVisualEditorTree } from './create-settings-tree.js'
+import type { AppSettings, SettingsPageProps, SettingsPageResult } from './types/settings-page.types.js'
 
 export const createSettingsPage = function(props: SettingsPageProps): SettingsPageResult {
   const cleanupFunctions: Array<() => void> = [];
@@ -115,23 +115,23 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
   const toolboxPanel = document.createElement('vbs-tab-panel');
   toolboxPanel.setAttribute('slot', 'panel');
   const toolboxPane = document.createElement('div');
-  toolboxPane.className = 'flex flex-1 w-full h-full';
-  
+  toolboxPane.className = 'flex flex-1 w-full h-full min-h-0';
+
   const tbLeftPane = document.createElement('div');
-  tbLeftPane.className = 'w-1/2 border-r border-slate-800 p-6 overflow-y-auto flex flex-col gap-4';
+  tbLeftPane.className = 'w-1/2 border-r border-slate-800 p-6 flex flex-col min-h-0 overflow-hidden gap-4';
   const tbLeftTitle = document.createElement('h3');
-  tbLeftTitle.className = 'text-lg font-medium text-slate-300';
+  tbLeftTitle.className = 'text-lg font-medium text-slate-300 shrink-0';
   tbLeftTitle.textContent = 'Visual Editor';
   const treeContainer = document.createElement('div');
-  treeContainer.className = 'flex-1 bg-slate-950 rounded-lg border border-slate-800 flex flex-col overflow-hidden text-sm';
+  treeContainer.className = 'flex-1 bg-slate-950 rounded-lg border border-slate-800 flex flex-col min-h-0 overflow-hidden text-sm';
 
   const tbRightPane = document.createElement('div');
-  tbRightPane.className = 'w-1/2 p-6 overflow-y-auto flex flex-col gap-4 bg-slate-950 font-mono';
+  tbRightPane.className = 'w-1/2 p-6 flex flex-col min-h-0 overflow-hidden gap-4 bg-slate-950 font-mono';
   const tbRightTitle = document.createElement('h3');
-  tbRightTitle.className = 'text-lg font-medium text-slate-300 font-sans';
+  tbRightTitle.className = 'text-lg font-medium text-slate-300 font-sans shrink-0';
   tbRightTitle.textContent = 'Raw Data (Preview)';
   const rawTextarea = document.createElement('textarea');
-  rawTextarea.className = 'flex-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-4 text-sm text-slate-300 focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono resize-none';
+  rawTextarea.className = 'flex-1 min-h-0 w-full bg-slate-900 border border-slate-700 rounded-lg p-4 text-sm text-slate-300 focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono resize-none';
   rawTextarea.spellcheck = false;
 
   const renderRaw = () => {
