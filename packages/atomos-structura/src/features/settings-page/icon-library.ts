@@ -27,3 +27,4 @@ export const ICON_LIBRARY: Record<string, string> = {
   "State (State Machine)": `<rect x="4" y="4" width="16" height="16" rx="8"/>`,
   "Start (BPMN)": `<circle cx="12" cy="12" r="10" stroke-width="2"/>`,
   "End (BPMN)": `<circle cx="12" cy="12" r="10" stroke-width="4"/>`
+};
