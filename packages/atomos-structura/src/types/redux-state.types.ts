@@ -26,6 +26,7 @@ export interface ReduxState {
   readonly active_schema_id: string;
   readonly canvas_viewport: ViewportState;
   readonly settings?: AppSettings;
+  readonly is_settings_open?: boolean;
 }
 
 export type ReduxAction =
@@ -39,6 +40,7 @@ export type ReduxAction =
   | { type: 'link-removed'; schema_id: string; link_id: string }
   | { type: 'viewport-updated'; viewport: ViewportState }
   | { type: 'settings-updated'; settings: AppSettings }
+  | { type: 'settings-toggled'; is_open: boolean }
   | { type: 'state-loaded'; state: ReduxState };
 
 export interface ReduxStore {

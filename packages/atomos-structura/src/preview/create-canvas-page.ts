@@ -12,9 +12,9 @@ import { getGlobalReduxStore } from '../core/create-redux-store.js'
 export const createCanvasPage = function() {
   const cleanups: Array<() => void> = [];
 
-  // Root — fills full viewport, top offset for the HTML nav bar (40px)
+  // Root — fills full viewport
   const root = document.createElement('div');
-  root.style.cssText = 'position:fixed;top:40px;left:0;right:0;bottom:0;overflow:hidden;background:var(--vbs-bg-input, #09090b);';
+  root.style.cssText = 'position:fixed;inset:0;overflow:hidden;background:var(--vbs-bg-input, #09090b);';
 
   // Canvas container — full area below nav
   const canvasWrap = document.createElement('div');
@@ -260,23 +260,50 @@ export const createCanvasPage = function() {
     viewport,
     entityManager: getEntityManager(),
     onSettings: () => {
-      const settingsPage = createSettingsPage({
+      const store = getGlobalReduxStore();
+      const st = store.get_state();
+      store.dispatch({ type: 'settings-toggled', is_open: !st.is_settings_open });
+    },
+  });
+  canvasWrap.appendChild(toolbar);
+
+  let currentSettingsPage: { element: HTMLElement; cleanup: { destroy: () => void } } | null = null;
+  const store = getGlobalReduxStore();
+  const unsubSettings = store.subscribe(() => {
+    const st = store.get_state();
+    if (st.is_settings_open && !currentSettingsPage) {
+      currentSettingsPage = createSettingsPage({
         initialSettings: { toolbox: getToolboxConfig(), shapes: getCustomShapes() },
         onClose: () => {
-          settingsPage.element.remove();
-          settingsPage.cleanup.destroy();
+          store.dispatch({ type: 'settings-toggled', is_open: false });
         },
         onSave: (settings) => {
           setToolboxConfig(settings.toolbox);
           setCustomShapes(settings.shapes);
-          settingsPage.element.remove();
-          settingsPage.cleanup.destroy();
+          store.dispatch({ type: 'settings-toggled', is_open: false });
         },
       });
-      root.appendChild(settingsPage.element);
-    },
+      root.appendChild(currentSettingsPage.element);
+    } else if (!st.is_settings_open && currentSettingsPage) {
+      currentSettingsPage.element.remove();
+      currentSettingsPage.cleanup.destroy();
+      currentSettingsPage = null;
+    }
   });
-  canvasWrap.appendChild(toolbar);
+
+  // initial check
+  const initSt = store.get_state();
+  if (initSt.is_settings_open) {
+    store.dispatch({ type: 'settings-toggled', is_open: true }); // force re-render
+  }
+
+  cleanups.push(() => {
+    unsubSettings();
+    if (currentSettingsPage) {
+      currentSettingsPage.element.remove();
+      currentSettingsPage.cleanup.destroy();
+    }
+  });
 
   // ── Schema Panel (right side, collapsible treeview) ──────────────────────
   const dagObserver = createDAGObserver(getEntityManager());

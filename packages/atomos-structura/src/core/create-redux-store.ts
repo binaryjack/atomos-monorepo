@@ -199,6 +199,13 @@ const reduce_state = function(state: ReduxState, action: ReduxAction): ReduxStat
       };
     }
 
+    case 'settings-toggled': {
+      return {
+        ...state,
+        is_settings_open: action.is_open
+      };
+    }
+
     case 'state-loaded': {
       return action.state;
     }
