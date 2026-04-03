@@ -3,6 +3,7 @@ import { createAccordion, createButton } from '@atomos/prime'
 import { createForm, f } from '@binaryjack/formular.dev'
 
 import type { CustomShape } from './types/settings-page.types.js'
+import { ICON_LIBRARY } from './icon-library.js'
 
 export interface VisualEditorTreeProps {
   readonly config: ToolboxConfiguration;
@@ -243,13 +244,130 @@ export const createVisualEditorTree = function(props: VisualEditorTreeProps): Vi
       lbl.textContent = key;
       wrp.appendChild(lbl);
 
-      const inp = document.createElement('input');
-      inp.className = 'bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 outline-none w-full';
-      inp.value = val;
-      inp.addEventListener('input', (e) => {
-         currentData[key] = (e.target as HTMLInputElement).value;
-      });
-      wrp.appendChild(inp);
+      if (key === 'icon') {
+        const select = document.createElement('select');
+        select.className = 'bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 outline-none w-full';
+        
+        let found = false;
+        Object.entries(ICON_LIBRARY).forEach(([name, svgPath]) => {
+          const opt = document.createElement('option');
+          opt.value = svgPath;
+          opt.textContent = name;
+          if (svgPath === val) {
+            opt.selected = true;
+            found = true;
+          }
+          select.appendChild(opt);
+        });
+
+        if (!found && val) {
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = 'Custom / Current';
+          opt.selected = true;
+          select.appendChild(opt);
+        }
+
+        if (!val) {
+           const ph = document.createElement('option');
+           ph.value = '';
+           ph.textContent = 'Select an icon...';
+           ph.disabled = true;
+           ph.selected = true;
+           select.prepend(ph);
+        }
+
+        select.addEventListener('change', (e) => {
+          currentData[key] = (e.target as HTMLSelectElement).value;
+        });
+        wrp.appendChild(select);
+        
+      } else if (key === 'shape') {
+        const select = document.createElement('select');
+        select.className = 'bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 outline-none w-full';
+        
+        const defaultShapes = ['box', 'rectangle', 'diamond', 'circle', 'actor', 'cylinder'];
+        let found = false;
+        
+        defaultShapes.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s;
+          opt.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+          if (s === val) {
+            opt.selected = true;
+            found = true;
+          }
+          select.appendChild(opt);
+        });
+
+        if (props.availableShapes && props.availableShapes.length > 0) {
+          const group = document.createElement('optgroup');
+          group.label = 'Custom Shapes';
+          props.availableShapes.forEach(cs => {
+            const opt = document.createElement('option');
+            opt.value = cs.id;
+            opt.textContent = cs.name;
+            if (cs.id === val) {
+              opt.selected = true;
+              found = true;
+            }
+            group.appendChild(opt);
+          });
+          select.appendChild(group);
+        }
+
+        if (!found && val) {
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = val + ' (Custom)';
+          opt.selected = true;
+          select.appendChild(opt);
+        }
+
+        if (!val) {
+           const ph = document.createElement('option');
+           ph.value = '';
+           ph.textContent = 'Select a shape...';
+           ph.disabled = true;
+           ph.selected = true;
+           select.prepend(ph);
+        }
+
+        select.addEventListener('change', (e) => {
+          currentData[key] = (e.target as HTMLSelectElement).value;
+        });
+        wrp.appendChild(select);
+        
+      } else if (key === 'baseColor') {
+        const colorWrap = document.createElement('div');
+        colorWrap.className = 'flex gap-2 w-full';
+        
+        const preview = document.createElement('div');
+        preview.className = 'w-10 h-10 rounded border border-slate-700 flex-shrink-0';
+        preview.style.background = val || 'transparent';
+        
+        const inp = document.createElement('input');
+        inp.className = 'bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 outline-none w-full';
+        inp.value = val;
+        inp.addEventListener('input', (e) => {
+           currentData[key] = (e.target as HTMLInputElement).value;
+           preview.style.background = currentData[key];
+        });
+        
+        colorWrap.appendChild(preview);
+        colorWrap.appendChild(inp);
+        wrp.appendChild(colorWrap);
+        
+      } else {
+        const inp = document.createElement('input');
+        inp.className = 'bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 outline-none w-full';
+        inp.value = val;
+        inp.addEventListener('input', (e) => {
+           currentData[key] = (e.target as HTMLInputElement).value;
+        });
+        wrp.appendChild(inp);
+      }
+      
       parent.appendChild(wrp);
     });
 
