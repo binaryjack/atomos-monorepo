@@ -2,6 +2,7 @@ import { defaultToolboxConfig } from '../../core/default-toolbox.config.js'
 import { createButton } from '../button/create-button.js'
 import { createDecisionMatrix } from '../decision-matrix/create-decision-matrix.js'
 import { createVisualEditorTree } from './create-settings-tree.js'
+import { createShapesEditor } from './create-shapes-editor.js'
 import type { AppSettings, SettingsPageProps, SettingsPageResult } from './types/settings-page.types.js'
 
 export const createSettingsPage = function(props: SettingsPageProps): SettingsPageResult {
@@ -19,7 +20,8 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
 
   const currentSettings: AppSettings = {
     toolbox: props.initialSettings?.toolbox || JSON.parse(JSON.stringify(defaultToolboxConfig)),
-    matrices: props.initialSettings?.matrices || JSON.parse(JSON.stringify(defaultMatrices))
+    matrices: props.initialSettings?.matrices || JSON.parse(JSON.stringify(defaultMatrices)),
+    shapes: props.initialSettings?.shapes || []
   };
 
   // Base Container (Full screen)
@@ -82,7 +84,8 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
   const navItems = [
     { id: 'general', label: 'General Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
     { id: 'toolbox', label: 'Toolbox Configuration', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z' },
-    { id: 'matrices', label: 'Decision Matrices', icon: 'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z' }
+    { id: 'matrices', label: 'Decision Matrices', icon: 'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z' },
+    { id: 'shapes', label: 'Shapes Repository', icon: 'M4 5a2 2 0 012-2h4a2 2 0 012 2v2H6V5zm0 6h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8zm2-2a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2H6z' }
   ];
 
   navItems.forEach(item => {
@@ -141,6 +144,7 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
 
   const { element: treeElement, updateConfig: updateTree, cleanup: treeCleanup } = createVisualEditorTree({
     config: currentSettings.toolbox,
+    availableShapes: currentSettings.shapes,
     onChange: (newConfig) => {
       currentSettings.toolbox = newConfig;
       markDirty();
@@ -154,7 +158,7 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
     markDirty();
     try {
        currentSettings.toolbox = JSON.parse((e.target as HTMLTextAreaElement).value);
-       updateTree(currentSettings.toolbox);
+       updateTree(currentSettings.toolbox, currentSettings.shapes);
     } catch {
        // Ignore invalid parsing
     }
@@ -201,6 +205,23 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
   matrixPanel.appendChild(matrixPane);
   vbsTabs.appendChild(matrixPanel);
 
+  // -- Pane 3: Shapes Repository --
+  const shapesPanel = document.createElement('vbs-tab-panel');
+  shapesPanel.setAttribute('slot', 'panel');
+  const shapesPane = document.createElement('div');
+  shapesPane.className = 'flex flex-1 w-full h-full min-h-0';
+  
+  const { element: shapesEditorElement } = createShapesEditor({
+    shapes: currentSettings.shapes,
+    onChange: (ns) => {
+      currentSettings.shapes = ns;
+      updateTree(currentSettings.toolbox, currentSettings.shapes); // update tree dropdowns if shapes change
+      markDirty();
+    }
+  });
+  shapesPane.appendChild(shapesEditorElement);
+  shapesPanel.appendChild(shapesPane);
+  vbsTabs.appendChild(shapesPanel);
 
   // Dirty state tracker
   const markDirty = () => {

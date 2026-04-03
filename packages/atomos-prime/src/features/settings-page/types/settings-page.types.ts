@@ -1,12 +1,19 @@
 import type { ToolboxConfiguration } from '../../../types/toolbox.types.js';
 import type { DecisionMatrixCriterion, DecisionMatrixOption } from '../../decision-matrix/index.js';
 
+export interface CustomShape {
+  id: string;
+  name: string;
+  svg: string;
+}
+
 export interface AppSettings {
   toolbox: ToolboxConfiguration;
   matrices: {
     criteria: DecisionMatrixCriterion[];
     options: DecisionMatrixOption[];
   };
+  shapes: CustomShape[];
 }
 
 export interface SettingsPageProps {

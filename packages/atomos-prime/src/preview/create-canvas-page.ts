@@ -1,5 +1,5 @@
 import { createDAGObserver } from '../core/adapters/dag-observer.js';
-import { getToolboxConfig, setToolboxConfig } from '../core/adapters/toolbox-config-manager.js';
+import { getToolboxConfig, setToolboxConfig, getCustomShapes, setCustomShapes } from '../core/adapters/toolbox-config-manager.js';
 import { createCanvasViewport } from '../core/create-canvas-viewport.js';
 import { createWorkspaceManager } from '../core/create-workspace-manager.js';
 import { getEntityManager } from '../core/presentation/entity-manager.js';
@@ -260,13 +260,14 @@ export const createCanvasPage = function() {
     entityManager: getEntityManager(),
     onSettings: () => {
       const settingsPage = createSettingsPage({
-        initialSettings: { toolbox: getToolboxConfig(), matrices: { criteria: [], options: [] } },
+        initialSettings: { toolbox: getToolboxConfig(), matrices: { criteria: [], options: [] }, shapes: getCustomShapes() },
         onClose: () => {
           settingsPage.element.remove();
           settingsPage.cleanup.destroy();
         },
         onSave: (settings) => {
           setToolboxConfig(settings.toolbox);
+          setCustomShapes(settings.shapes);
           settingsPage.element.remove();
           settingsPage.cleanup.destroy();
         },

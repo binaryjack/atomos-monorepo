@@ -2,18 +2,21 @@ import { createForm, f } from '@binaryjack/formular.dev'
 import type { IFormular, IObjectShape } from '@binaryjack/formular.dev'
 import type { ToolboxConfiguration, ToolboxItem, Toolset } from '../../types/toolbox.types.js'
 import { createButton } from '../button/create-button.js'
-import { createFormularInput } from '../formular/index.js'
+import { createFormularInput, createFormularDropdown } from '../formular/index.js'
 import { createFormularTextarea } from '../formular/index.js'
+
+import type { CustomShape } from './types/settings-page.types.js'
 
 export interface VisualEditorTreeProps {
   readonly config: ToolboxConfiguration;
+  readonly availableShapes: CustomShape[];
   readonly onChange: (newConfig: ToolboxConfiguration) => void;
 }
 
 export interface VisualEditorTreeResult {
   readonly element: HTMLElement;
   readonly cleanup: { destroy: () => void };
-  readonly updateConfig: (config: ToolboxConfiguration) => void;
+  readonly updateConfig: (config: ToolboxConfiguration, newAvailableShapes?: CustomShape[]) => void;
 }
 
 // Schemas
@@ -39,7 +42,7 @@ export const createVisualEditorTree = function(props: VisualEditorTreeProps): Vi
   const editingNodes = new Map<string, HTMLElement>();
 
   const container = document.createElement('div');
-  container.className = 'w-full h-full overflow-y-auto flex flex-col gap-2 p-2';
+  container.className = 'w-full h-full flex-1 overflow-y-auto flex flex-col gap-2 p-2';
 
   const notifyChange = () => {
     props.onChange(JSON.parse(JSON.stringify(activeConfig)));
@@ -257,7 +260,17 @@ export const createVisualEditorTree = function(props: VisualEditorTreeProps): Vi
     } else {
       appendField(createFormularInput({ fieldName: 'id', form, label: 'ID' }));
       appendField(createFormularInput({ fieldName: 'name', form, label: 'Name' }));
-      appendField(createFormularInput({ fieldName: 'shape', form, label: 'Shape' }));
+        const shapeOptions = [
+          { value: 'circle', label: 'Circle' },
+          { value: 'diamond', label: 'Diamond' },
+          { value: 'oval', label: 'Oval' },
+          { value: 'parallelogram', label: 'Parallelogram' },
+          { value: 'chevron', label: 'Chevron' },
+          { value: 'trapeze', label: 'Trapeze' },
+          { value: 'rect', label: 'Rectangle' },
+          ...(props.availableShapes?.map(s => ({ value: s.id, label: s.name })) || [])
+        ];
+        appendField(createFormularDropdown({ fieldName: 'shape', form, label: 'Shape', options: shapeOptions }));
       appendField(createFormularInput({ fieldName: 'baseColor', form, label: 'Base Color' }));
       appendField(createFormularInput({ fieldName: 'icon', form, label: 'Icon' }));
       appendField(createFormularTextarea({ fieldName: 'description', form, label: 'Description' }));
@@ -298,8 +311,11 @@ export const createVisualEditorTree = function(props: VisualEditorTreeProps): Vi
 
   return {
     element: container,
-    updateConfig: (newConfig: ToolboxConfiguration) => {
+    updateConfig: (newConfig: ToolboxConfiguration, newAvailableShapes?: CustomShape[]) => {
       activeConfig = JSON.parse(JSON.stringify(newConfig));
+      if (newAvailableShapes) {
+        (props as any).availableShapes = newAvailableShapes;
+      }
       renderTree();
     },
     cleanup: { destroy: () => { cleanupFunctions.forEach(fn => fn()); } }
