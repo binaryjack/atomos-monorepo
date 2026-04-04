@@ -16,7 +16,8 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
       enableSnapping: true,
       defaultLinkStyle: 'bezier',
       gridPrimaryColor: '#334155',
-      gridSecondaryColor: '#1e293b'
+      gridSecondaryColor: '#1e293b',
+      canvasBackgroundColor: '#0f172a'
     },
     shapes: props.initialSettings?.shapes || []
   };
@@ -230,6 +231,31 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
   gridSecondaryColorWrap.appendChild(gridSecondaryInput);
   gridSecondaryColorRow.appendChild(gridSecondaryColorWrap);
   genForm.appendChild(gridSecondaryColorRow);
+
+  // Canvas Background Color
+  const canvasBgColorRow = document.createElement('div');
+  canvasBgColorRow.className = 'flex flex-col gap-2';
+  canvasBgColorRow.innerHTML = `<label class="text-sm font-medium text-slate-300">Canvas Background Color</label>`;
+
+  const canvasBgColorWrap = document.createElement('div');
+  canvasBgColorWrap.className = 'flex gap-2 w-full max-w-xs';
+  const canvasBgPreview = document.createElement('div');
+  canvasBgPreview.className = 'w-10 h-10 rounded border border-slate-700 flex-shrink-0';
+  canvasBgPreview.style.background = currentSettings.general?.canvasBackgroundColor || '#0f172a';
+  const canvasBgInput = document.createElement('input');
+  canvasBgInput.className = 'bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:border-purple-500 w-full';
+  canvasBgInput.value = currentSettings.general?.canvasBackgroundColor || '#0f172a';
+  canvasBgInput.addEventListener('input', (e) => {
+    if (!currentSettings.general) currentSettings.general = {};
+    const val = (e.target as HTMLInputElement).value;
+    currentSettings.general.canvasBackgroundColor = val;
+    canvasBgPreview.style.background = val;
+    markDirty();
+  });
+  canvasBgColorWrap.appendChild(canvasBgPreview);
+  canvasBgColorWrap.appendChild(canvasBgInput);
+  canvasBgColorRow.appendChild(canvasBgColorWrap);
+  genForm.appendChild(canvasBgColorRow);
 
   genPane.appendChild(genForm);
   generalSettingsPanel.appendChild(genPane);

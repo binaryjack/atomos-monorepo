@@ -13,7 +13,8 @@ let currentGeneral: AppSettings['general'] = {
   enableSnapping: true,
   defaultLinkStyle: 'bezier',
   gridPrimaryColor: '#334155',
-  gridSecondaryColor: '#1e293b'
+  gridSecondaryColor: '#1e293b',
+  canvasBackgroundColor: '#0f172a'
 };
 
 try {

@@ -14,6 +14,7 @@ export interface AppSettings {
     defaultLinkStyle?: string;
     gridPrimaryColor?: string;
     gridSecondaryColor?: string;
+    canvasBackgroundColor?: string;
   };
   shapes: CustomShape[];
 }

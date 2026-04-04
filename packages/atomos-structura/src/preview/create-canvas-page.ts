@@ -281,6 +281,9 @@ export const createCanvasPage = function() {
   const applyGridSettings = () => {
     const general = getGeneralSettings();
     if (general) {
+      if (general.canvasBackgroundColor) {
+        root.style.backgroundColor = general.canvasBackgroundColor;
+      }
       if (general.gridPrimaryColor) {
         root.style.setProperty('--vbs-grid-primary-color', general.gridPrimaryColor);
         // Also update the static svg grid paths if they rely on it
