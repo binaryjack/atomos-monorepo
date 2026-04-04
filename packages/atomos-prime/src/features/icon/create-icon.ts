@@ -1,5 +1,5 @@
-import type { IconProps, IconResult, IconName } from './types/icon.types.js';
-export type { IconProps, IconResult, IconName };
+import type { IconName, IconProps, IconResult } from './types/icon.types.js'
+export type { IconName, IconProps, IconResult }
 
 export const createIcon = function(props: IconProps): IconResult {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

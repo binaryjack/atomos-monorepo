@@ -1,4 +1,4 @@
-import type { Signal } from '../../../core/types/signal.types.js';
+import type { Signal } from '../../../core/types/signal.types.js'
 
 export type IconName = 'check' | 'close' | 'arrow-up' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'plus' | 'minus' | 'edit' | 'delete' | 'search' | 'menu' | 'settings' | 'user' | 'database' | 'code' | 'download' | 'upload' | 'link' | 'image' | 'play' | 'stop' | 'refresh';
 

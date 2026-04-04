@@ -190,20 +190,28 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
   
   const gridPrimaryColorWrap = document.createElement('div');
   gridPrimaryColorWrap.className = 'flex gap-2 w-full max-w-xs';
-  const gridPrimaryPreview = document.createElement('div');
-  gridPrimaryPreview.className = 'w-10 h-10 rounded border border-slate-700 flex-shrink-0';
-  gridPrimaryPreview.style.background = currentSettings.general?.gridPrimaryColor || '#334155';
+  
+  const gridPrimaryPicker = document.createElement('input');
+  gridPrimaryPicker.type = 'color';
+  gridPrimaryPicker.className = 'w-10 h-10 p-0.5 rounded border border-slate-700 flex-shrink-0 cursor-pointer bg-slate-950 appearance-none';
+  gridPrimaryPicker.value = currentSettings.general?.gridPrimaryColor || '#334155';
+  
   const gridPrimaryInput = document.createElement('input');
-  gridPrimaryInput.className = 'bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:border-purple-500 w-full';
+  gridPrimaryInput.className = 'bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:border-purple-500 w-full font-mono';
   gridPrimaryInput.value = currentSettings.general?.gridPrimaryColor || '#334155';
-  gridPrimaryInput.addEventListener('input', (e) => {
+  
+  const handlePrimaryChange = (val: string) => {
     if (!currentSettings.general) currentSettings.general = {};
-    const val = (e.target as HTMLInputElement).value;
     currentSettings.general.gridPrimaryColor = val;
-    gridPrimaryPreview.style.background = val;
+    gridPrimaryPicker.value = val;
+    if (gridPrimaryInput.value !== val) gridPrimaryInput.value = val;
     markDirty();
-  });
-  gridPrimaryColorWrap.appendChild(gridPrimaryPreview);
+  };
+  
+  gridPrimaryPicker.addEventListener('input', (e) => handlePrimaryChange((e.target as HTMLInputElement).value));
+  gridPrimaryInput.addEventListener('input', (e) => handlePrimaryChange((e.target as HTMLInputElement).value));
+  
+  gridPrimaryColorWrap.appendChild(gridPrimaryPicker);
   gridPrimaryColorWrap.appendChild(gridPrimaryInput);
   gridPrimaryColorRow.appendChild(gridPrimaryColorWrap);
   genForm.appendChild(gridPrimaryColorRow);
@@ -214,20 +222,28 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
   
   const gridSecondaryColorWrap = document.createElement('div');
   gridSecondaryColorWrap.className = 'flex gap-2 w-full max-w-xs';
-  const gridSecondaryPreview = document.createElement('div');
-  gridSecondaryPreview.className = 'w-10 h-10 rounded border border-slate-700 flex-shrink-0';
-  gridSecondaryPreview.style.background = currentSettings.general?.gridSecondaryColor || '#1e293b';
+  
+  const gridSecondaryPicker = document.createElement('input');
+  gridSecondaryPicker.type = 'color';
+  gridSecondaryPicker.className = 'w-10 h-10 p-0.5 rounded border border-slate-700 flex-shrink-0 cursor-pointer bg-slate-950 appearance-none';
+  gridSecondaryPicker.value = currentSettings.general?.gridSecondaryColor || '#1e293b';
+  
   const gridSecondaryInput = document.createElement('input');
-  gridSecondaryInput.className = 'bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:border-purple-500 w-full';
+  gridSecondaryInput.className = 'bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:border-purple-500 w-full font-mono';
   gridSecondaryInput.value = currentSettings.general?.gridSecondaryColor || '#1e293b';
-  gridSecondaryInput.addEventListener('input', (e) => {
+  
+  const handleSecondaryChange = (val: string) => {
     if (!currentSettings.general) currentSettings.general = {};
-    const val = (e.target as HTMLInputElement).value;
     currentSettings.general.gridSecondaryColor = val;
-    gridSecondaryPreview.style.background = val;
+    gridSecondaryPicker.value = val;
+    if (gridSecondaryInput.value !== val) gridSecondaryInput.value = val;
     markDirty();
-  });
-  gridSecondaryColorWrap.appendChild(gridSecondaryPreview);
+  };
+  
+  gridSecondaryPicker.addEventListener('input', (e) => handleSecondaryChange((e.target as HTMLInputElement).value));
+  gridSecondaryInput.addEventListener('input', (e) => handleSecondaryChange((e.target as HTMLInputElement).value));
+  
+  gridSecondaryColorWrap.appendChild(gridSecondaryPicker);
   gridSecondaryColorWrap.appendChild(gridSecondaryInput);
   gridSecondaryColorRow.appendChild(gridSecondaryColorWrap);
   genForm.appendChild(gridSecondaryColorRow);
@@ -239,20 +255,28 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
 
   const canvasBgColorWrap = document.createElement('div');
   canvasBgColorWrap.className = 'flex gap-2 w-full max-w-xs';
-  const canvasBgPreview = document.createElement('div');
-  canvasBgPreview.className = 'w-10 h-10 rounded border border-slate-700 flex-shrink-0';
-  canvasBgPreview.style.background = currentSettings.general?.canvasBackgroundColor || '#0f172a';
+  
+  const canvasBgPicker = document.createElement('input');
+  canvasBgPicker.type = 'color';
+  canvasBgPicker.className = 'w-10 h-10 p-0.5 rounded border border-slate-700 flex-shrink-0 cursor-pointer bg-slate-950 appearance-none';
+  canvasBgPicker.value = currentSettings.general?.canvasBackgroundColor || '#0f172a';
+  
   const canvasBgInput = document.createElement('input');
-  canvasBgInput.className = 'bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:border-purple-500 w-full';
+  canvasBgInput.className = 'bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:border-purple-500 w-full font-mono';
   canvasBgInput.value = currentSettings.general?.canvasBackgroundColor || '#0f172a';
-  canvasBgInput.addEventListener('input', (e) => {
+  
+  const handleCanvasBgChange = (val: string) => {
     if (!currentSettings.general) currentSettings.general = {};
-    const val = (e.target as HTMLInputElement).value;
     currentSettings.general.canvasBackgroundColor = val;
-    canvasBgPreview.style.background = val;
+    canvasBgPicker.value = val;
+    if (canvasBgInput.value !== val) canvasBgInput.value = val;
     markDirty();
-  });
-  canvasBgColorWrap.appendChild(canvasBgPreview);
+  };
+  
+  canvasBgPicker.addEventListener('input', (e) => handleCanvasBgChange((e.target as HTMLInputElement).value));
+  canvasBgInput.addEventListener('input', (e) => handleCanvasBgChange((e.target as HTMLInputElement).value));
+  
+  canvasBgColorWrap.appendChild(canvasBgPicker);
   canvasBgColorWrap.appendChild(canvasBgInput);
   canvasBgColorRow.appendChild(canvasBgColorWrap);
   genForm.appendChild(canvasBgColorRow);
