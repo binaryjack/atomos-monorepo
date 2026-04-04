@@ -15,6 +15,7 @@ export const createEntityDragBehavior = function(
   let dragging = false;
   let didMove = false;
   let dragStart = { svgX: 0, svgY: 0, posX: 0, posY: 0 };
+  let queuedFrame: number | null = null;
 
   const onMouseDown = (e: Event): void => {
     const target = e.target as HTMLElement;
@@ -53,28 +54,40 @@ export const createEntityDragBehavior = function(
     if (!didMove && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
       didMove = true;
     }
-    
-    // Grid snapping: use CSS variable --vbs-grid-size or default to 16
-    const root = document.querySelector('.vbs-workspace, vbs-workspace') as HTMLElement || document.body;
-    let gridSize = 16;
-    if (root) {
-      const gridVar = getComputedStyle(root).getPropertyValue('--vbs-grid-size');
-      const parsed = parseInt(gridVar);
-      if (!isNaN(parsed) && parsed > 0) gridSize = parsed;
+
+    if (queuedFrame !== null) {
+      cancelAnimationFrame(queuedFrame);
     }
+    
+    queuedFrame = requestAnimationFrame(() => {
+      queuedFrame = null;
 
-    const rawX = dragStart.posX + dx;
-    const rawY = dragStart.posY + dy;
+      // Grid snapping: use CSS variable --vbs-grid-size or default to 16
+      const root = document.querySelector('.vbs-workspace, vbs-workspace') as HTMLElement || document.body;
+      let gridSize = 16;
+      if (root) {
+        const gridVar = getComputedStyle(root).getPropertyValue('--vbs-grid-size');
+        const parsed = parseInt(gridVar);
+        if (!isNaN(parsed) && parsed > 0) gridSize = parsed;
+      }
 
-    position.set({
-      x: Math.round(rawX / gridSize) * gridSize,
-      y: Math.round(rawY / gridSize) * gridSize
+      const rawX = dragStart.posX + dx;
+      const rawY = dragStart.posY + dy;
+
+      position.set({
+        x: Math.round(rawX / gridSize) * gridSize,
+        y: Math.round(rawY / gridSize) * gridSize
+      });
     });
   };
 
   const onMouseUp = (): void => {
     if (!dragging) return;
     dragging = false;
+    if (queuedFrame !== null) {
+      cancelAnimationFrame(queuedFrame);
+      queuedFrame = null;
+    }
     if (!didMove) {
       // Pure click — select this entity
       selected.set(true);

@@ -79,3 +79,20 @@ VBE must remain pure vanilla TypeScript (no classes, declarative data) while sea
 *   **DOM-based Context Menus**
 *   **Undo/Redo History**
 *   **Navigation Minimap**
+## 5. Architectural Optimizations & Tech Debt Mitigation
+*Date added: 2026-04-04*
+
+*   **Undo/Redo History (Command Pattern)**: 
+    *   Leverage our strict CQRS architecture in ntity-service.ts to push inverted Command objects onto a HistoryStack singleton. This natively supports complex canvas Undo/Redo operations.
+*   **Auto-Cleanup / Memory Leak Prevention**: 
+    *   Current risk: Returning cleanup() functions creates an Explicit Tear-Down Risk if a developer manually removes a node from the DOM but forgets to call cleanup, leaving Signals active in memory.
+    *   Solution: Implement a global MutationObserver on the root workspace that automatically triggers a tracked element's cleanup from a WeakMap when it is disconnected from the DOM.
+*   **Event Delegation (InteractionManager)**: 
+    *   Instead of attaching mousedown/mousemove to every node and handle, attach a single listener to the root SVG and rely on .target.closest('[data-drag-handle]') to distribute events. This drastically reduces memory overhead.
+    *   *Note*: Requires careful refactoring to remove .stopPropagation() reliance.
+*   **Dependency Injection (DI) / Scoped Context**: 
+    *   Reduce prop-drilling in factory functions (like passing workspace, position, dimensions down 5 levels) by introducing a lightweight Context or EntityContext object.
+*   **DOM Node Recycling (Pooling)**: 
+    *   If properties scale to thousands, recycle DOM rows in create-entity-content.ts instead of destroying and recreating them to avoid Garbage Collection pauses.
+*   **GPU & foreignObject Limits**: 
+    *   Keep CSS light inside the SVG oreignObject. Avoid heavy ox-shadow or ackdrop-filter: blur, as WebKit/Safari struggles to hardware-accelerate complex nested HTML inside zoomed SVGs.
