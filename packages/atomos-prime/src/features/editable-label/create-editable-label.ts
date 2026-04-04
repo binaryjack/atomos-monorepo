@@ -86,8 +86,12 @@ export const createEditableLabel = function(props: EditableLabelProps): Editable
   span.addEventListener('dblclick', enterEdit);
   cleanups.push(() => span.removeEventListener('dblclick', enterEdit));
 
-  // Prevent mousedown from bubbling out of wrapper (e.g. into SVG drag handler)
-  const stopMouseDown = (e: Event): void => { e.stopPropagation(); };
+  // Prevent mousedown from bubbling out of wrapper ONLY when editing (e.g. into SVG drag handler)
+  const stopMouseDown = (e: Event): void => { 
+    if (editing) {
+      e.stopPropagation(); 
+    }
+  };
   wrapper.addEventListener('mousedown', stopMouseDown);
   cleanups.push(() => wrapper.removeEventListener('mousedown', stopMouseDown));
 

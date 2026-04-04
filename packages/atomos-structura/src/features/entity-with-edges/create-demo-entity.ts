@@ -1,14 +1,14 @@
-﻿import { createSignal } from '@atomos/prime';
-import type { EntityInstance } from '../../core/types/entity-instance.types.js';
-import { createEdge } from '../edge/create-edge.js';
-import type { EdgePosition } from '../edge/types/edge-position.types.js';
-import { createEntitySettingsModal } from '../modal/create-entity-settings-modal.js';
-import { createCompactEntityContent } from './create-compact-entity-content.js';
-import { createEntityContent } from './create-entity-content.js';
-import { createEntityDragBehavior } from './create-entity-drag-behavior.js';
-import { createEntityResizeHandles } from './create-entity-resize-handles.js';
-import { createEntitySelectionRing } from './create-entity-selection-ring.js';
-import type { DemoEntityProps, DemoEntityResult } from './types/demo-entity.types.js';
+﻿import { createSignal } from '@atomos/prime'
+import type { EntityInstance } from '../../core/types/entity-instance.types.js'
+import { createEdge } from '../edge/create-edge.js'
+import type { EdgePosition } from '../edge/types/edge-position.types.js'
+import { createEntitySettingsModal } from '../modal/create-entity-settings-modal.js'
+import { createCompactEntityContent } from './create-compact-entity-content.js'
+import { createEntityContent } from './create-entity-content.js'
+import { createEntityDragBehavior } from './create-entity-drag-behavior.js'
+import { createEntityResizeHandles } from './create-entity-resize-handles.js'
+import { createEntitySelectionRing } from './create-entity-selection-ring.js'
+import type { DemoEntityProps, DemoEntityResult } from './types/demo-entity.types.js'
 
 const EDGE_THICKNESS = 3 as const;
 
