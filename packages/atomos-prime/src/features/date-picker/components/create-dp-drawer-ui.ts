@@ -16,7 +16,7 @@ export interface DpDrawerUiResult {
 export const createDpDrawerUi = function(ctx: DpContext): DpDrawerUiResult {
   const el = document.createElement('div');
   el.className = [
-    'dp-drawer-ui',
+    'dp-drawer-ui', 'p-3',
     'bg-[var(--vbs-bg-panel,#ffffff)]', 'text-[var(--vbs-text-primary,#111111)]', 'rounded-[var(--vbs-radius,12px)]', 'shadow-lg', 'border', 'border-[var(--vbs-border,#e5e7eb)]',
   ].join(' ');
 

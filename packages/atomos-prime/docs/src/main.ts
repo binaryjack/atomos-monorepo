@@ -4,11 +4,11 @@ import { COMPONENT_REGISTRY, getDocById } from './registry.js'
 
 // Build the shell layout
 const root = document.getElementById('docs-root')!;
-root.style.cssText = 'display:flex;height:100vh;width:100vw;overflow:hidden;background:#0f172a;color:#f8fafc;font-family:system-ui,sans-serif;';
+root.style.cssText = 'display:flex;height:100vh;width:100vw;overflow:hidden;background:var(--vbs-bg-body, #0f172a);color:var(--vbs-text-primary, #f8fafc);font-family:system-ui,sans-serif;';
 
 // Sidebar
 const sidebar = document.createElement('div');
-sidebar.style.cssText = 'width:260px;background:#020617;border-right:1px solid #1e293b;padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;overflow-y:auto;';
+sidebar.style.cssText = 'width:260px;background:var(--vbs-bg-sidebar, #020617);border-right:1px solid var(--vbs-border, #1e293b);padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;overflow-y:auto;';
 sidebar.innerHTML = `
   <div>
     <h1 style="font-size:1.25rem;font-weight:bold;margin:0 0 0.5rem 0;color:#c084fc;">@atomos/prime</h1>
@@ -16,18 +16,22 @@ sidebar.innerHTML = `
   </div>
 `;
 
+// Main Content
+const mainContent = document.createElement('div');
+mainContent.style.cssText = 'flex:1;display:flex;flex-direction:column;height:100vh;position:relative;background:var(--vbs-bg-body, #0f172a);';
+
 // Theme Toggle
 const themeToggleBtn = document.createElement('button');
 themeToggleBtn.textContent = 'Toggle Theme 🌙';
 themeToggleBtn.style.cssText = 'background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:0.5rem;border-radius:4px;cursor:pointer;font-size:0.875rem;font-weight:600;font-family:inherit;width:100%;text-align:left;transition:all 0.15s;';
 let isDarkTheme = true;
-themeToggleBtn.onclick = () => {
-  isDarkTheme = !isDarkTheme;
+
+const applyTheme = () => {
   themeToggleBtn.textContent = isDarkTheme ? 'Toggle Theme 🌙' : 'Toggle Theme ☀️';
-  
+
   // Basic DOM inversion
   document.documentElement.className = isDarkTheme ? 'dark' : 'light';
-  
+
   const bgBody = isDarkTheme ? '#0f172a' : '#f8fafc';
   const textPrimary = isDarkTheme ? '#f1f5f9' : '#0f172a';
   const bgPanel = isDarkTheme ? '#1e293b' : '#ffffff';
@@ -37,18 +41,18 @@ themeToggleBtn.onclick = () => {
   document.documentElement.style.setProperty('--vbs-bg-body', bgBody);
   document.documentElement.style.setProperty('--vbs-bg-panel', bgPanel);
   document.documentElement.style.setProperty('--vbs-text-primary', textPrimary);
-
-  // Update shell inline styles
-  root.style.background = bgBody;
-  root.style.color = textPrimary;
-  sidebar.style.background = bgSidebar;
-  sidebar.style.borderColor = isDarkTheme ? '#1e293b' : '#e2e8f0';
-  mainContent.style.background = bgBody;
-  
-  // Re-load the component to apply some updates if needed
-  loadComponent(window.location.hash.slice(1) || COMPONENT_REGISTRY[0].id);
+  document.documentElement.style.setProperty('--vbs-border', borderCol);
+  document.documentElement.style.setProperty('--vbs-bg-sidebar', bgSidebar);
+  document.documentElement.style.setProperty('--vbs-hover', isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
 };
-sidebar.appendChild(themeToggleBtn);
+
+// apply initial theme immediately
+applyTheme();
+
+themeToggleBtn.onclick = () => {
+  isDarkTheme = !isDarkTheme;
+  applyTheme();
+};
 
 // Radius Adjuster
 const radiusWrap = document.createElement('div');
@@ -104,10 +108,6 @@ categories.forEach(cat => {
 });
 
 sidebar.appendChild(navList);
-
-// Main Content
-const mainContent = document.createElement('div');
-mainContent.style.cssText = 'flex:1;display:flex;flex-direction:column;height:100vh;position:relative;background:var(--vbs-bg-body, #0f172a);';
 
 // The Sandbox Viewport (Top)
 const sandboxViewport = document.createElement('div');
@@ -319,3 +319,4 @@ if (window.location.hash && window.location.hash.length > 1) {
 } else {
   loadComponent(COMPONENT_REGISTRY[0].id);
 }
+
