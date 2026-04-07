@@ -19,10 +19,8 @@ export const createSVGShape = (shape: EntityShape, width: number, height: number
       svgEl.setAttribute('width', width.toString());
       svgEl.setAttribute('height', height.toString());
       const finalColor = color || 'var(--vbs-bg-panel, #09090b)';
-      // Apply base colors
-      svgEl.style.fill = finalColor;
-      svgEl.style.stroke = 'var(--vbs-primary, #3b82f6)';
-      svgEl.style.color = finalColor;
+      svgEl.setAttribute('fill', finalColor);
+      svgEl.setAttribute('stroke', 'var(--vbs-primary, #3b82f6)');
       return svgEl;
     }
   }
