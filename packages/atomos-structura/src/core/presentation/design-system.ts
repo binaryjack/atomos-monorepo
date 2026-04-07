@@ -85,13 +85,6 @@ export const injectDesignSystemTokens = () => {
       font-weight: ${DEFAULT_ENTITY_STYLE.propsFontWeight};
       fill: ${DEFAULT_ENTITY_STYLE.propsColor};
     }
-    .vbs-entity-shape {
-      stroke-width: ${DEFAULT_ENTITY_STYLE.borderWidth};
-    }
-    .vbs-entity-rect {
-      rx: var(--vbs-entity-border-radius, ${DEFAULT_ENTITY_STYLE.borderRadius}px);
-      ry: var(--vbs-entity-border-radius, ${DEFAULT_ENTITY_STYLE.borderRadius}px);
-    }
     .vbs-link {
       stroke: ${DEFAULT_LINK_STYLE.color};
       stroke-width: ${DEFAULT_LINK_STYLE.thickness}px;
@@ -138,13 +131,6 @@ export const applyAppearanceTokens = (entity?: Partial<EntityStyleSettings>, lin
     font-size: ${e.propsFontSize}px;
     font-weight: ${e.propsFontWeight};
     fill: ${e.propsColor};
-  }
-  .vbs-entity-shape {
-    stroke-width: ${e.borderWidth};
-  }
-  .vbs-entity-rect {
-    rx: ${e.borderRadius}px;
-    ry: ${e.borderRadius}px;
   }
   .vbs-link {
     stroke: ${l.color};

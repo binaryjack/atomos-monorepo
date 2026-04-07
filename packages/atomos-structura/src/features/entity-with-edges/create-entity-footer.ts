@@ -32,7 +32,8 @@ export const createEntityFooter = function(props: EntityFooterProps): EntityFoot
   addBtn.style.cssText = [
     'display:flex', 'align-items:center', 'gap:4px',
     'background:none', 'border:none', 'cursor:pointer',
-    `color:${contrast.textColor}`, 'font-size:11px', 'padding:2px 4px',
+    `color:${contrast.textColor}`, 'font-size:var(--vbs-entity-props-font-size, 11px)', 'padding:2px 4px',
+    'font-family:var(--vbs-entity-props-font-family, system-ui, sans-serif)',
     'border-radius: var(--vbs-radius, 2px)',
   ].join(';');
   addBtn.title = 'Add property';

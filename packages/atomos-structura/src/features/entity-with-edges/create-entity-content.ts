@@ -54,7 +54,7 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
     `background:${props.color || 'var(--vbs-bg-input, #09090b)'}`,
     'border:1.5px solid var(--vbs-border, #27272a)',
     'box-sizing:border-box',
-    'font-family:system-ui,sans-serif',
+    'font-family:var(--vbs-entity-name-font-family, system-ui, sans-serif)',
     'color:var(--vbs-text-primary, #f4f4f5)',
   ].join(';');
 

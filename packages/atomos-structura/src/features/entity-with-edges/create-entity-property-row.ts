@@ -35,7 +35,7 @@ const buildValueInput = function(
   const sharedStyle = [
     'background:var(--vbs-bg-input, #09090b)', 'color:var(--vbs-text-primary, #f4f4f5)',
     'border:1px solid var(--vbs-border, #27272a)', 'border-radius:var(--vbs-radius, 2px)',
-    'font-size:12px', 'padding:0 6px',
+    'font-size:var(--vbs-entity-props-font-size, 12px)', 'padding:0 6px',
     'height:var(--vbs-control-height, 28px)', 'width:100%', 'box-sizing:border-box', 'min-width:0', 'outline:none',
     'transition:border-color 0.15s ease'
   ].join(';');
@@ -146,6 +146,10 @@ export const createEntityPropertyRow = function(
   editableLabel.element.style.flex = '0 0 70px';
   editableLabel.element.style.maxWidth = '100px';
   editableLabel.element.style.overflow = 'hidden';
+  editableLabel.element.style.fontFamily = 'var(--vbs-entity-props-font-family, system-ui, sans-serif)';
+  editableLabel.element.style.fontSize = 'var(--vbs-entity-props-font-size, 12px)';
+  editableLabel.element.style.fontWeight = 'var(--vbs-entity-props-font-weight, normal)';
+  editableLabel.element.style.color = 'var(--vbs-entity-props-color, #a1a1aa)';
   cleanups.push(editableLabel.cleanup.destroy);
 
   // Value input — type adapts to componentType + dataType
@@ -176,7 +180,7 @@ export const createEntityPropertyRow = function(
     '--dropdown-border-color:var(--vbs-border, #27272a)',
     '--dropdown-focus-border-color:var(--vbs-primary, #3b82f6)',
     '--dropdown-border-radius:var(--vbs-radius, 2px)',
-    '--dropdown-font-size:12px',
+    '--dropdown-font-size:var(--vbs-entity-props-font-size, 12px)',
     '--dropdown-padding:0 20px 0 6px',
     'width:60px',
     'height:var(--vbs-control-height, 28px)',
@@ -199,7 +203,7 @@ export const createEntityPropertyRow = function(
     '--dropdown-border-color:var(--vbs-border, #27272a)',
     '--dropdown-focus-border-color:var(--vbs-primary, #3b82f6)',
     '--dropdown-border-radius:var(--vbs-radius, 2px)',
-    '--dropdown-font-size:12px',
+    '--dropdown-font-size:var(--vbs-entity-props-font-size, 12px)',
     '--dropdown-padding:0 20px 0 6px',
     'width:80px',
     'height:var(--vbs-control-height, 28px)',

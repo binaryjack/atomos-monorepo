@@ -41,8 +41,11 @@ export const createEntityHeader = function(props: EntityHeaderProps): EntityHead
     inputClassName: 'text-sm font-semibold text-slate-100',
     onChange: props.onLabelChange,
   });
-  // Override text colour based on background contrast
+  // Override text colour based on background contrast; font from appearance settings vars
   editableLabel.element.style.color = contrast.textColor;
+  editableLabel.element.style.fontFamily = 'var(--vbs-entity-name-font-family, system-ui, sans-serif)';
+  editableLabel.element.style.fontSize = 'var(--vbs-entity-name-font-size, 14px)';
+  editableLabel.element.style.fontWeight = 'var(--vbs-entity-name-font-weight, bold)';
   cleanups.push(editableLabel.cleanup.destroy);
 
   // Settings button

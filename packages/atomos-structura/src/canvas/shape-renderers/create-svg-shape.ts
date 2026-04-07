@@ -1,5 +1,6 @@
 import type { EntityShape } from '@atomos/structura-core'
 import { getCustomShapes } from '../../core/adapters/toolbox-config-manager.js'
+import { applyCommonStyles } from './apply-common-styles.js'
 import { createChevron } from './create-chevron.js'
 import { createCircle } from './create-circle.js'
 import { createDiamond } from './create-diamond.js'
@@ -8,9 +9,26 @@ import { createParallelogram } from './create-parallelogram.js'
 import { createTrapeze } from './create-trapeze.js'
 
 export const createSVGShape = (shape: EntityShape, width: number, height: number, color?: string | undefined): SVGElement => {
+  // Built-in native renderers take priority — prevents defaultShapes repository entries
+  // with the same IDs (diamond, circle, etc.) from shadowing optimised native paths.
+  switch (shape) {
+    case 'circle': return createCircle(width, height, color);
+    case 'diamond': return createDiamond(width, height, color);
+    case 'oval': return createOval(width, height, color);
+    case 'parallelogram': return createParallelogram(width, height, color);
+    case 'chevron': return createChevron(width, height, color);
+    case 'trapeze': return createTrapeze(width, height, color);
+    // Toolbox aliases → native fallbacks
+    case 'cylinder' as any: return createOval(width, height, color);
+    case 'actor' as any: return createCircle(width, height, color);
+    case 'document' as any: return createTrapeze(width, height, color);
+    case 'note' as any: return createParallelogram(width, height, color);
+  }
+
+  // Non-built-in ID: look up the user-defined custom shape repository.
   const customShapes = getCustomShapes();
   const customShape = customShapes.find(s => s.id === (shape as string));
-  
+
   if (customShape) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(customShape.svg, 'image/svg+xml');
@@ -19,38 +37,20 @@ export const createSVGShape = (shape: EntityShape, width: number, height: number
       svgEl.setAttribute('width', width.toString());
       svgEl.setAttribute('height', height.toString());
       const finalColor = color || 'var(--vbs-bg-panel, #09090b)';
-      svgEl.setAttribute('fill', finalColor);
-      svgEl.setAttribute('stroke', 'var(--vbs-primary, #3b82f6)');
+      // setAttribute('style') works on DOMParser elements before adoption into main document.
+      // .style CSSStyleDeclaration is unavailable on cross-document XML nodes.
+      // CSS var() resolves correctly inside inline style strings.
+      svgEl.setAttribute('style', `fill: ${finalColor}; stroke: var(--vbs-primary, #3b82f6); stroke-width: 1; transition: all 0.2s ease-in-out;`);
       return svgEl;
     }
   }
 
-  // Built-ins array mapping
-  switch (shape) {
-    case 'circle': return createCircle(width, height, color);
-    case 'diamond': return createDiamond(width, height, color);
-    case 'oval': return createOval(width, height, color);
-    case 'parallelogram': return createParallelogram(width, height, color);
-    case 'chevron': return createChevron(width, height, color);
-    case 'trapeze': return createTrapeze(width, height, color);
-    // Aliases mapped from Settings
-    case 'cylinder' as any: return createOval(width, height, color); // Fallback
-    case 'actor' as any: return createCircle(width, height, color); // Fallback
-    case 'document' as any: return createTrapeze(width, height, color); // Fallback
-    case 'note' as any: return createParallelogram(width, height, color); // Fallback
-    default: {
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      rect.setAttribute('class', 'vbs-entity-shape vbs-entity-rect');
-      rect.setAttribute('width', width.toString());
-      rect.setAttribute('height', height.toString());
-      const finalColor = color || 'var(--vbs-bg-panel, #09090b)';
-      // fill and stroke via inline style: var() resolves, highest priority, always visible
-      // stroke-width via presentation attribute: CSS class .vbs-entity-shape can override it
-      rect.style.fill = finalColor;
-      rect.style.stroke = 'var(--vbs-primary, #3b82f6)';
-      rect.style.transition = 'all 0.2s ease-in-out';
-      rect.setAttribute('stroke-width', '1');
-      return rect;
-    }
-  }
+  // Final fallback: plain rect
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('width', width.toString());
+  rect.setAttribute('height', height.toString());
+  rect.setAttribute('rx', '4');
+  rect.setAttribute('ry', '4');
+  applyCommonStyles(rect, color);
+  return rect;
 };
