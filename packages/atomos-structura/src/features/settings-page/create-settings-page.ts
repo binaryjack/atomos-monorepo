@@ -79,6 +79,7 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
   // Tabs
   const vbsTabs = document.createElement('vbs-tabs');
   vbsTabs.setAttribute('active-tab', 'toolbox');
+  vbsTabs.setAttribute('variant', 'pills');
   vbsTabs.className = 'w-full h-full';
 
   // Tab Details
@@ -95,6 +96,7 @@ export const createSettingsPage = function(props: SettingsPageProps): SettingsPa
     const tabEl = document.createElement('vbs-tab');
     tabEl.setAttribute('slot', 'tab');
     tabEl.setAttribute('value', item.id);
+    tabEl.setAttribute('variant', 'canvas');
     tabEl.innerHTML = `<span class="flex items-center gap-2"><svg width="16" height="16" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}"></path></svg> ${item.label}</span>`;
     vbsTabs.appendChild(tabEl);
   });

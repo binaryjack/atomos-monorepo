@@ -2,13 +2,11 @@ import { getGlobalReduxStore } from './create-redux-store.js';
 import type { ReduxState } from '../types/redux-state.types.js';
 import type { Entity, Property } from '@atomos/structura-core';
 
-const SCHEMA_ID = 'schema-default';
-
 /**
  * Generic selector creator.
  * Encapsulates the global redux store read.
  */
-export const createSelector = <TArgs extends any[], TResult>(
+export const createSelector = <TArgs extends unknown[], TResult>(
   selectorFn: (state: ReduxState, ...args: TArgs) => TResult
 ) => {
   return (...args: TArgs): TResult => {
@@ -17,14 +15,20 @@ export const createSelector = <TArgs extends any[], TResult>(
   };
 };
 
+/** Returns the active schema from the active canvas, or undefined. */
+const getActiveSchema = (state: ReduxState) => {
+  const canvas = state.workspace.canvases[state.workspace.active_canvas_id];
+  return canvas?.schemas[canvas.active_schema_id];
+};
+
 /**
  * Select an Entity by its ID
  */
 export const selectEntityById = createSelector(
   (state, entityId: string): Entity | undefined => {
-    const schema = state.schemas[SCHEMA_ID];
+    const schema = getActiveSchema(state);
     if (!schema) return undefined;
-    return schema.entities.find((e: any) => e.id === entityId);
+    return schema.entities.find((e) => e.id === entityId);
   }
 );
 
@@ -33,11 +37,11 @@ export const selectEntityById = createSelector(
  */
 export const selectPropertyByKey = createSelector(
   (state, entityId: string, propertyKey: string): Property | undefined => {
-    const schema = state.schemas[SCHEMA_ID];
+    const schema = getActiveSchema(state);
     if (!schema) return undefined;
-    const entity = schema.entities.find((e: any) => e.id === entityId);
+    const entity = schema.entities.find((e) => e.id === entityId);
     if (!entity) return undefined;
-    return entity.properties?.find((p: any) => p.key === propertyKey);
+    return entity.properties?.find((p) => p.key === propertyKey);
   }
 );
 
@@ -46,7 +50,7 @@ export const selectPropertyByKey = createSelector(
  */
 export const selectAllEntities = createSelector(
   (state): readonly Entity[] => {
-    const schema = state.schemas[SCHEMA_ID];
+    const schema = getActiveSchema(state);
     if (!schema) return [];
     return schema.entities;
   }
@@ -57,8 +61,8 @@ export const selectAllEntities = createSelector(
  */
 export const selectLinkById = createSelector(
   (state, linkId: string) => {
-    const schema = state.schemas[SCHEMA_ID];
+    const schema = getActiveSchema(state);
     if (!schema) return undefined;
-    return schema.links.find((l: any) => l.id === linkId);
+    return schema.links.find((l) => l.id === linkId);
   }
 );

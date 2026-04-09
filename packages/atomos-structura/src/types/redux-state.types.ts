@@ -8,24 +8,31 @@ export interface SchemaModel {
   readonly links: readonly LinkProps[];
 }
 
-export interface LinkModel {
-  readonly id: string;
-  readonly from_entity_id: string;
-  readonly to_entity_id: string;
-  readonly from_anchor?: string | undefined;
-  readonly to_anchor?: string | undefined;
-}
-
 export interface ViewportState {
   readonly pan: { x: number; y: number };
   readonly zoom: number;
 }
 
-export interface ReduxState {
+export interface CanvasModel {
+  readonly id: string;
+  readonly name: string;
   readonly schemas: Record<string, SchemaModel>;
   readonly active_schema_id: string;
-  readonly canvas_viewport: ViewportState;
+  readonly viewport: ViewportState;
+  readonly appearance_override?: AppSettings['appearance'];
+}
+
+export interface WorkspaceState {
+  readonly name: string;
+  readonly version: string;
+  readonly last_modified: string;
   readonly settings?: AppSettings;
+  readonly canvases: Record<string, CanvasModel>;
+  readonly active_canvas_id: string;
+}
+
+export interface ReduxState {
+  readonly workspace: WorkspaceState;
   readonly is_settings_open?: boolean;
 }
 
@@ -41,11 +48,16 @@ export type ReduxAction =
   | { type: 'viewport-updated'; viewport: ViewportState }
   | { type: 'settings-updated'; settings: AppSettings }
   | { type: 'settings-toggled'; is_open: boolean }
-  | { type: 'state-loaded'; state: ReduxState }
   | { type: 'schema-created'; id: string; name: string }
   | { type: 'schema-renamed'; id: string; name: string }
   | { type: 'schema-deleted'; id: string }
-  | { type: 'schema-activated'; id: string };
+  | { type: 'schema-activated'; id: string }
+  | { type: 'canvas-created'; id: string; name: string }
+  | { type: 'canvas-renamed'; id: string; name: string }
+  | { type: 'canvas-deleted'; id: string }
+  | { type: 'canvas-activated'; id: string }
+  | { type: 'canvas-appearance-updated'; canvas_id: string; appearance: AppSettings['appearance'] }
+  | { type: 'state-loaded'; state: ReduxState };
 
 export interface ReduxStore {
   readonly get_state: () => ReduxState;

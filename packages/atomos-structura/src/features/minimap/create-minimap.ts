@@ -8,6 +8,7 @@ const PADDING = 40;
 export interface MinimapResult {
   readonly element: HTMLElement;
   readonly cleanup: { destroy: () => void };
+  readonly refresh: () => void;
 }
 
 export const createMinimap = function(
@@ -196,6 +197,7 @@ export const createMinimap = function(
 
   return {
     element: wrap,
+    refresh: render,
     cleanup: {
       destroy: () => {
         cleanups.forEach(fn => fn());

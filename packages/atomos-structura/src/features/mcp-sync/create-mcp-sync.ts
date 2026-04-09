@@ -1,8 +1,18 @@
 import type { Entity, LinkProps } from '@atomos/structura-core';
-import type { ReduxStore } from '../../types/redux-state.types.js';
+import type { AppSettings } from '../settings-page/types/settings-page.types.js';
+import type { ReduxState, ReduxStore } from '../../types/redux-state.types.js';
 
 export interface McpSyncResult {
   readonly cleanup: () => void;
+}
+
+interface McpWorkspaceEvent {
+  type: 'settings-updated' | 'schema-created' | 'schema-renamed' | 'schema-deleted' | 'schema-activated' | 'state-loaded'
+    | 'canvas-created' | 'canvas-renamed' | 'canvas-deleted' | 'canvas-activated';
+  settings?: AppSettings;
+  id?: string;
+  name?: string;
+  state?: ReduxState;
 }
 
 export const createMcpSync = (
@@ -17,8 +27,9 @@ export const createMcpSync = (
     syncing = true;
     try {
       const st = store.get_state();
-      const schemaId = st.active_schema_id;
-      const schema = st.schemas[schemaId];
+      const activeCanvas = st.workspace.canvases[st.workspace.active_canvas_id];
+      const schemaId = activeCanvas?.active_schema_id ?? '';
+      const schema = activeCanvas?.schemas[schemaId];
       const existingEntityIds = new Set((schema?.entities ?? []).map(e => e.id));
       const existingLinkIds = new Set((schema?.links ?? []).map(l => l.id));
 
@@ -60,12 +71,58 @@ export const createMcpSync = (
     }
   };
 
+  const applyWorkspaceEvent = (ev: McpWorkspaceEvent): void => {
+    if (syncing) return;
+    syncing = true;
+    try {
+      switch (ev.type) {
+        case 'state-loaded':
+          if (ev.state) store.dispatch({ type: 'state-loaded', state: ev.state });
+          break;
+        case 'settings-updated':
+          if (ev.settings) store.dispatch({ type: 'settings-updated', settings: ev.settings });
+          break;
+        case 'schema-created':
+          if (ev.id && ev.name) store.dispatch({ type: 'schema-created', id: ev.id, name: ev.name });
+          break;
+        case 'schema-renamed':
+          if (ev.id && ev.name) store.dispatch({ type: 'schema-renamed', id: ev.id, name: ev.name });
+          break;
+        case 'schema-deleted':
+          if (ev.id) store.dispatch({ type: 'schema-deleted', id: ev.id });
+          break;
+        case 'schema-activated':
+          if (ev.id) store.dispatch({ type: 'schema-activated', id: ev.id });
+          break;
+        case 'canvas-created':
+          if (ev.id && ev.name) store.dispatch({ type: 'canvas-created', id: ev.id, name: ev.name });
+          break;
+        case 'canvas-renamed':
+          if (ev.id && ev.name) store.dispatch({ type: 'canvas-renamed', id: ev.id, name: ev.name });
+          break;
+        case 'canvas-deleted':
+          if (ev.id) store.dispatch({ type: 'canvas-deleted', id: ev.id });
+          break;
+        case 'canvas-activated':
+          if (ev.id) store.dispatch({ type: 'canvas-activated', id: ev.id });
+          break;
+      }
+    } finally {
+      syncing = false;
+    }
+  };
+
   try {
     es = new EventSource(`${mcpUrl}/events`);
     es.addEventListener('change', (e: MessageEvent) => {
       try {
         const data = JSON.parse(e.data) as { entities: Entity[]; links: LinkProps[] };
         applyChange(data);
+      } catch { /* ignore malformed events */ }
+    });
+    es.addEventListener('workspace', (e: MessageEvent) => {
+      try {
+        applyWorkspaceEvent(JSON.parse(e.data) as McpWorkspaceEvent);
       } catch { /* ignore malformed events */ }
     });
     es.onerror = () => { /* MCP server may not be running — silent */ };
@@ -75,3 +132,4 @@ export const createMcpSync = (
     cleanup: () => { es?.close(); es = null; },
   };
 };
+

@@ -19,7 +19,8 @@ export const createSchemaValidator = (store: ReduxStore): SchemaValidator => {
   const runRules = (): ValidationWarning[] => {
     try {
       const st = store.get_state();
-      const schema = st.schemas[st.active_schema_id];
+      const canvas = st.workspace.canvases[st.workspace.active_canvas_id];
+      const schema = canvas?.schemas[canvas?.active_schema_id ?? ''];
       if (!schema) return [];
 
       const warnings: ValidationWarning[] = [];

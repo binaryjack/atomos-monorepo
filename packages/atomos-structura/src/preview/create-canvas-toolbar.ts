@@ -3,6 +3,7 @@ import type { CanvasViewport } from '../core/create-canvas-viewport.js';
 import type { EntityManager } from '../core/presentation/entity-manager.js';
 import { getGlobalReduxStore } from '../core/create-redux-store.js';
 import type { SchemaGraphKernel } from '../core/create-schema-graph-kernel.js';
+import type { ReduxState } from '../types/redux-state.types.js';
 import { createCanvasSnapshot } from '../features/export/create-canvas-snapshot.js';
 import { getExportPlugins } from '../features/export/create-export-registry.js';
 
@@ -14,7 +15,7 @@ export interface CanvasToolbarConfig {
   readonly getSnapshot: () => SVGSVGElement;
 }
 
-export const createCanvasToolbar = function(config: CanvasToolbarConfig): HTMLElement {
+export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bottomBar: HTMLElement, topBurger: HTMLElement } {
   const { viewport, entityManager } = config;
 
   const toolbar = document.createElement('div');
@@ -66,8 +67,8 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): HTMLEl
     const box = getBoundingBox();
     if (!box) return;
     const { zoom } = viewport.state.value;
-    const screenW = window.innerWidth;
-    const screenH = window.innerHeight - 40; // Nav height
+    const screenW = toolbar.parentElement?.clientWidth || window.innerWidth;
+    const screenH = (toolbar.parentElement?.clientHeight || window.innerHeight) - 40; // Nav height
     const targetPanX = (screenW / 2) - ((box.minX + box.width / 2) * zoom);
     const targetPanY = (screenH / 2) - ((box.minY + box.height / 2) * zoom);
     viewport.panTo(targetPanX, targetPanY);
@@ -76,8 +77,8 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): HTMLEl
   const fitToScreen = () => {
     const box = getBoundingBox();
     if (!box) return;
-    const screenW = window.innerWidth;
-    const screenH = window.innerHeight - 40;
+    const screenW = toolbar.parentElement?.clientWidth || window.innerWidth;
+    const screenH = (toolbar.parentElement?.clientHeight || window.innerHeight) - 40;
     const padding = 100;
     const zoomX = (screenW - padding * 2) / Math.max(box.width, 1);
     const zoomY = (screenH - padding * 2) / Math.max(box.height, 1);
@@ -249,6 +250,33 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): HTMLEl
   schemaExportWrap.appendChild(schemaExportBtn);
   schemaExportWrap.appendChild(schemaExportPanel);
 
+  // -- Workspace Save/Load --
+  const workspaceLoadInput = document.createElement('input');
+  workspaceLoadInput.type = 'file';
+  workspaceLoadInput.accept = 'application/json';
+  workspaceLoadInput.style.display = 'none';
+  workspaceLoadInput.onchange = async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    try {
+      const state = JSON.parse(await file.text()) as ReduxState;
+      store.dispatch({ type: 'state-loaded', state });
+    } catch { alert('Invalid workspace JSON file.'); }
+    workspaceLoadInput.value = '';
+  };
+
+  const saveWorkspaceBtn = createIconButton(
+    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`,
+    'Save Workspace (JSON)',
+    () => downloadText(JSON.stringify(store.get_state(), null, 2), `workspace-${Date.now()}.json`, 'application/json')
+  );
+
+  const loadWorkspaceBtn = createIconButton(
+    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-4M17 9l-5 5-5-5M12 12.8V2.5"/></svg>`,
+    'Load Workspace (JSON)',
+    () => workspaceLoadInput.click()
+  );
+
   const snapshot = createCanvasSnapshot(config.getSnapshot);
 
   const exportSvgBtn = createIconButton(
@@ -308,26 +336,93 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): HTMLEl
   });
 
   // Assemble
-  toolbar.appendChild(importInput);
-  toolbar.appendChild(importBtn);
-  toolbar.appendChild(exportBtn);
-  toolbar.appendChild(autoLayoutBtn);
-  toolbar.appendChild(divider());
-  toolbar.appendChild(schemaExportWrap);
-  toolbar.appendChild(exportSvgBtn);
-  toolbar.appendChild(exportPngBtn);
-  toolbar.appendChild(divider());
+
+  const topBurger = document.createElement('div');
+  topBurger.style.cssText = 'position:relative; display:flex; align-items:center; z-index:50;';
+
+  const moreMenu = document.createElement('div');
+  moreMenu.style.cssText = [
+    'position:absolute; top:calc(100% + 8px); left:0;',
+    'display:flex; flex-direction:column; gap:4px;',
+    'background:rgba(15,23,42,0.95); backdrop-filter:blur(8px);',
+    'border:1px solid var(--vbs-border, #27272a); border-radius:12px; padding:6px;',
+    'box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);',
+    'opacity:0; pointer-events:none; transform:translateY(-10px) scale(0.95);',
+    'transition:all 0.2s cubic-bezier(0.16, 1, 0.3, 1);',
+    'transform-origin:top left;'
+  ].join('');
+  
+  const openMenu = () => {
+    moreMenu.style.opacity = '1';
+    moreMenu.style.pointerEvents = 'all';
+    moreMenu.style.transform = 'translateY(0) scale(1)';
+  };
+  const closeMenu = () => {
+    moreMenu.style.opacity = '0';
+    moreMenu.style.pointerEvents = 'none';
+    moreMenu.style.transform = 'translateY(-10px) scale(0.95)';
+  };
+
+  let menuOpen = false;
+  const burgerBtn = createIconButton(
+    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
+    'More Options',
+    () => { 
+      menuOpen = !menuOpen;
+      if (menuOpen) openMenu(); else closeMenu();
+    }
+  );
+
+  const style = document.createElement('style');
+  style.textContent = '.vbs-more-menu-divider { width: 100% !important; height: 1px !important; margin: 4px 0 !important; background: var(--vbs-border, #27272a); }';
+  document.head.appendChild(style);
+
+  const hDivider = () => {
+    const d = document.createElement('div');
+    d.className = 'vbs-more-menu-divider';
+    return d;
+  };
+
+  // Add the extras into More Menu
+  moreMenu.appendChild(importBtn);
+  moreMenu.appendChild(exportBtn);
+  moreMenu.appendChild(autoLayoutBtn);
+  moreMenu.appendChild(hDivider());
+  moreMenu.appendChild(saveWorkspaceBtn);
+  moreMenu.appendChild(loadWorkspaceBtn);
+  moreMenu.appendChild(hDivider());
+  moreMenu.appendChild(schemaExportWrap);
+  moreMenu.appendChild(exportSvgBtn);
+  moreMenu.appendChild(exportPngBtn);
+  moreMenu.appendChild(hDivider());
+  moreMenu.appendChild(settingsBtn);
+
+  topBurger.appendChild(burgerBtn);
+  topBurger.appendChild(moreMenu);
+
+  // Hidden inputs
+  importInput.style.display = 'none';
+  workspaceLoadInput.style.display = 'none';
+  topBurger.appendChild(importInput);
+  topBurger.appendChild(workspaceLoadInput);
+
+  document.addEventListener('click', (e) => {
+    if (!topBurger.contains(e.target as Node)) {
+      menuOpen = false;
+      closeMenu();
+    }
+  });
+
+  // Core stable buttons go to bottom bar
   toolbar.appendChild(undoBtn);
   toolbar.appendChild(redoBtn);
   toolbar.appendChild(divider());
   toolbar.appendChild(centerBtn);
   toolbar.appendChild(fitBtn);
   toolbar.appendChild(divider());
-  toolbar.appendChild(settingsBtn);
-  toolbar.appendChild(divider());
   toolbar.appendChild(zoomOutBtn);
   toolbar.appendChild(zoomLabel);
   toolbar.appendChild(zoomInBtn);
 
-  return toolbar;
+  return { bottomBar: toolbar, topBurger };
 };

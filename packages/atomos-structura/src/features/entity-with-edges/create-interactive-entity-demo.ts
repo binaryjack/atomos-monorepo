@@ -169,7 +169,8 @@ export const createInteractiveEntityDemo = function(workspace: WorkspaceManager)
           // Only spawn if this entity belongs to the currently active schema.
           // Prevents cross-tab contamination when reannounceEntity fires events.
           const reduxState = getGlobalReduxStore().get_state();
-          const activeSchema = reduxState.schemas[reduxState.active_schema_id];
+          const activeCanvas = reduxState.workspace.canvases[reduxState.workspace.active_canvas_id];
+          const activeSchema = activeCanvas?.schemas[activeCanvas?.active_schema_id ?? ''];
           const entityInActiveSchema = activeSchema?.entities.some((e: { id: string }) => e.id === event.entity.id);
           if (!entityInActiveSchema) break;
 

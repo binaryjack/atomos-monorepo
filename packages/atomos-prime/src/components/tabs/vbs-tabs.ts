@@ -17,10 +17,12 @@ template.innerHTML = `
   .tab-list {
     display: flex;
     flex-wrap: nowrap;
+    gap: 4px;
     border-bottom: 1px solid var(--tab-border-color);
     overflow-x: auto;
     scrollbar-width: none;
     background: var(--tab-bg-color);
+    align-items: var(--tab-list-align, normal);
   }
   .tab-list::-webkit-scrollbar {
     display: none;
@@ -33,6 +35,34 @@ template.innerHTML = `
     display: flex;
     flex-direction: column;
     min-height: 0;
+  }
+
+  /* ── Canvas variant ──────────────────────────────────────────────────── */
+  :host([variant="canvas"]) {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+  }
+
+  :host([variant="canvas"]) .tab-list {
+    height: 100%;
+    align-items: flex-end;
+    border-bottom: none;
+    background: transparent;
+    padding: 0 4px;
+  }
+
+  :host([variant="canvas"]) .tab-panels {
+    display: none;
+  }
+
+  /* ── Pills variant — pill-style tab-list but panels remain visible ───── */
+  :host([variant="pills"]) .tab-list {
+    align-items: flex-end;
+    border-bottom: 1px solid var(--tab-border-color);
+    background: transparent;
+    padding: 0 4px;
   }
 </style>
 <div class="tab-list" role="tablist">
@@ -87,6 +117,8 @@ export class VbsTabs extends HTMLElement {
     this.#tabSlot.addEventListener('keydown', this._onKeyDown);
     this.#tabSlot.addEventListener('slotchange', this._onSlotChange);
     this.#panelSlot.addEventListener('slotchange', this._onSlotChange);
+    // Sync tabs that were slotted before this element was connected to the document.
+    this._onSlotChange();
   }
 
   disconnectedCallback() {

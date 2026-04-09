@@ -1,4 +1,6 @@
 import { getGlobalReduxStore } from '../core/create-redux-store.js';
+// Side-effect import: registers vbs-tab and vbs-tabs as custom elements
+import '@atomos/prime';
 
 const TAB_H = 36;
 
@@ -12,109 +14,46 @@ export const createSchemaTabs = function(): SchemaTabsResult {
   const store = getGlobalReduxStore();
   const cleanups: Array<() => void> = [];
 
+  // Outer bar — full-width strip at top of canvas
   const bar = document.createElement('div');
   bar.style.cssText = [
     'position:absolute;top:0;left:0;right:0;',
     `height:${TAB_H}px;`,
-    'display:flex;align-items:flex-end;gap:0;z-index:40;',
+    'display:flex;align-items:flex-end;z-index:40;',
     'background:var(--vbs-bg-canvas, #000);',
     'border-bottom:1px solid var(--vbs-border, #27272a);',
-    'padding:0 8px;user-select:none;overflow-x:auto;overflow-y:hidden;',
-    'scrollbar-width:none;',
   ].join('');
 
-  const renderTabs = (): void => {
-    bar.innerHTML = '';
+  // vbs-tabs hosts the scrollable tab list; panels are hidden via variant=canvas CSS
+  const tabsEl = document.createElement('vbs-tabs') as HTMLElement & { activeTab: string | null };
+  tabsEl.setAttribute('variant', 'canvas');
+  bar.appendChild(tabsEl);
+
+  // + button — outside vbs-tabs so it doesn't participate in tab navigation
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.title = 'New schema';
+  addBtn.textContent = '+';
+  addBtn.style.cssText = [
+    'background:none;border:none;cursor:pointer;flex-shrink:0;',
+    'width:28px;height:28px;display:flex;align-items:center;justify-content:center;',
+    'font-size:18px;line-height:1;border-radius:4px 4px 0 0;',
+    'color:var(--vbs-text-secondary,#a1a1aa);transition:color 0.15s;',
+    'margin-right:4px;',
+  ].join('');
+  addBtn.addEventListener('mouseenter', () => { addBtn.style.color = 'var(--vbs-text-primary,#f4f4f5)'; });
+  addBtn.addEventListener('mouseleave', () => { addBtn.style.color = 'var(--vbs-text-secondary,#a1a1aa)'; });
+  addBtn.addEventListener('click', () => {
     const st = store.get_state();
-    const schemas = Object.values(st.schemas);
+    const canvas = st.workspace.canvases[st.workspace.active_canvas_id];
+    const id = `schema-${Date.now()}`;
+    const name = `Schema ${Object.keys(canvas?.schemas ?? {}).length + 1}`;
+    store.dispatch({ type: 'schema-created', id, name });
+  });
+  bar.appendChild(addBtn);
 
-    schemas.forEach((schema) => {
-      const isActive = schema.id === st.active_schema_id;
-
-      const tab = document.createElement('div');
-      tab.style.cssText = [
-        'display:flex;align-items:center;gap:6px;',
-        'height:28px;padding:0 10px;',
-        'border:1px solid;border-bottom:none;',
-        'border-radius:4px 4px 0 0;',
-        'cursor:pointer;white-space:nowrap;',
-        'font-size:12px;font-family:system-ui,sans-serif;',
-        'transition:background 0.15s;',
-        isActive
-          ? 'background:var(--vbs-bg-panel,#111);border-color:var(--vbs-border,#27272a);color:var(--vbs-text-primary,#f4f4f5);'
-          : 'background:transparent;border-color:transparent;color:var(--vbs-text-secondary,#a1a1aa);',
-      ].join('');
-
-      // Label (double-click to rename)
-      const label = document.createElement('span');
-      label.textContent = schema.name;
-      label.style.cssText = 'pointer-events:none;max-width:140px;overflow:hidden;text-overflow:ellipsis;';
-
-      tab.appendChild(label);
-
-      tab.addEventListener('click', () => {
-        if (!isActive) {
-          store.dispatch({ type: 'schema-activated', id: schema.id });
-        }
-      });
-
-      tab.addEventListener('dblclick', (e) => {
-        e.stopPropagation();
-        startRename(tab, label, schema.id, schema.name);
-      });
-
-      // Close button (only if more than one schema)
-      if (schemas.length > 1) {
-        const closeBtn = document.createElement('button');
-        closeBtn.type = 'button';
-        closeBtn.textContent = '×';
-        closeBtn.title = 'Close schema';
-        closeBtn.style.cssText = [
-          'background:none;border:none;cursor:pointer;padding:0;',
-          'width:14px;height:14px;display:flex;align-items:center;justify-content:center;',
-          'font-size:14px;line-height:1;',
-          isActive ? 'color:var(--vbs-text-secondary,#a1a1aa);' : 'color:#52525b;',
-          'border-radius:2px;flex-shrink:0;',
-        ].join('');
-        closeBtn.addEventListener('mouseenter', () => { closeBtn.style.color = 'var(--vbs-danger,#ef4444)'; });
-        closeBtn.addEventListener('mouseleave', () => {
-          closeBtn.style.color = isActive ? 'var(--vbs-text-secondary,#a1a1aa)' : '#52525b';
-        });
-        closeBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const hasEntities = (store.get_state().schemas[schema.id]?.entities.length ?? 0) > 0;
-          if (hasEntities && !confirm(`Delete schema "${schema.name}" and all its entities?`)) return;
-          store.dispatch({ type: 'schema-deleted', id: schema.id });
-        });
-        tab.appendChild(closeBtn);
-      }
-
-      bar.appendChild(tab);
-    });
-
-    // New schema button
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.textContent = '+';
-    addBtn.title = 'New schema';
-    addBtn.style.cssText = [
-      'background:none;border:none;cursor:pointer;',
-      'width:28px;height:28px;align-self:flex-end;',
-      'display:flex;align-items:center;justify-content:center;',
-      'font-size:18px;line-height:1;border-radius:4px 4px 0 0;',
-      'color:var(--vbs-text-secondary,#a1a1aa);transition:color 0.15s;',
-    ].join('');
-    addBtn.addEventListener('mouseenter', () => { addBtn.style.color = 'var(--vbs-text-primary,#f4f4f5)'; });
-    addBtn.addEventListener('mouseleave', () => { addBtn.style.color = 'var(--vbs-text-secondary,#a1a1aa)'; });
-    addBtn.addEventListener('click', () => {
-      const id = `schema-${Date.now()}`;
-      const name = `Schema ${Object.keys(store.get_state().schemas).length + 1}`;
-      store.dispatch({ type: 'schema-created', id, name });
-    });
-    bar.appendChild(addBtn);
-  };
-
-  const startRename = (tab: HTMLElement, label: HTMLSpanElement, id: string, current: string): void => {
+  // ── Inline rename helper ──────────────────────────────────────────────────
+  const startRename = (tab: HTMLElement, labelSpan: HTMLElement, id: string, current: string): void => {
     const input = document.createElement('input');
     input.type = 'text';
     input.value = current;
@@ -126,11 +65,9 @@ export const createSchemaTabs = function(): SchemaTabsResult {
       'font-size:12px;font-family:system-ui,sans-serif;',
       'padding:1px 4px;width:100px;',
     ].join('');
-
-    label.replaceWith(input);
+    labelSpan.replaceWith(input);
     input.focus();
     input.select();
-
     const commit = (): void => {
       const name = input.value.trim() || current;
       store.dispatch({ type: 'schema-renamed', id, name });
@@ -142,9 +79,60 @@ export const createSchemaTabs = function(): SchemaTabsResult {
     });
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────
+  const renderTabs = (): void => {
+    // Remove previously slotted vbs-tab elements only
+    Array.from(tabsEl.querySelectorAll('vbs-tab')).forEach(el => el.remove());
+
+    const st = store.get_state();
+    const canvas = st.workspace.canvases[st.workspace.active_canvas_id];
+    const schemas = Object.values(canvas?.schemas ?? {});
+    const activeId = canvas?.active_schema_id ?? '';
+
+    // Keep vbs-tabs in sync (drives [selected] attribute on the active tab)
+    tabsEl.setAttribute('active-tab', activeId);
+
+    schemas.forEach((schema) => {
+      const tab = document.createElement('vbs-tab') as HTMLElement;
+      tab.setAttribute('slot', 'tab');
+      tab.setAttribute('value', schema.id);
+      tab.setAttribute('variant', 'canvas');
+      if (schemas.length > 1) tab.setAttribute('closeable', '');
+
+      const label = document.createElement('span');
+      label.textContent = schema.name;
+      label.style.cssText = 'pointer-events:none;max-width:140px;overflow:hidden;text-overflow:ellipsis;';
+      tab.appendChild(label);
+
+      tab.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        startRename(tab, label, schema.id, schema.name);
+      });
+
+      tabsEl.appendChild(tab);
+    });
+  };
+
+  // ── Event wiring via delegation — avoids setAttribute→change→dispatch loop
+  bar.addEventListener('vbs-tab-click', (e: Event) => {
+    const id = (e as CustomEvent).detail?.value as string | undefined;
+    if (!id) return;
+    const canvas = store.get_state().workspace.canvases[store.get_state().workspace.active_canvas_id];
+    if (id !== canvas?.active_schema_id) store.dispatch({ type: 'schema-activated', id });
+  });
+
+  bar.addEventListener('vbs-tab-close', (e: Event) => {
+    const id = (e as CustomEvent).detail?.value as string | undefined;
+    if (!id) return;
+    const st = store.get_state();
+    const canvas = st.workspace.canvases[st.workspace.active_canvas_id];
+    const hasEntities = (canvas?.schemas[id]?.entities.length ?? 0) > 0;
+    if (hasEntities && !confirm(`Delete schema "${canvas?.schemas[id]?.name}" and all its entities?`)) return;
+    store.dispatch({ type: 'schema-deleted', id });
+  });
+
   renderTabs();
-  const unsub = store.subscribe(renderTabs);
-  cleanups.push(unsub);
+  cleanups.push(store.subscribe(renderTabs));
 
   return {
     element: bar,

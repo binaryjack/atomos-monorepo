@@ -113,11 +113,12 @@ export const createCanvasPage = function() {
 
   // Viewport (zoom/pan) — attached to canvasWrap
   const viewport = createCanvasViewport(canvasWrap, svg);
-  viewport.state.subscribe(() => {
+  cleanups.push(viewport.state.subscribe((vs) => {
     viewportGroup.setAttribute('transform', viewport.transform());
     smallGrid.setAttribute('patternTransform', viewport.transform());
     largeGrid.setAttribute('patternTransform', viewport.transform());
-  });
+    store.dispatch({ type: 'viewport-updated', viewport: vs });
+  }));
   viewportGroup.setAttribute('transform', viewport.transform());
   smallGrid.setAttribute('patternTransform', viewport.transform());
   largeGrid.setAttribute('patternTransform', viewport.transform());
@@ -308,7 +309,7 @@ export const createCanvasPage = function() {
   cleanups.push(entitySearch.cleanup.destroy);
 
   // Mount Floating Toolbar
-  const toolbar = createCanvasToolbar({
+  const { bottomBar, topBurger } = createCanvasToolbar({
     viewport,
     entityManager: getEntityManager(),
     onSettings: () => {
@@ -319,14 +320,20 @@ export const createCanvasPage = function() {
     getKernel: () => {
       const reduxStore = getGlobalReduxStore();
       const st = reduxStore.get_state();
-      const schema = st.schemas[st.active_schema_id];
+      const canvas = st.workspace.canvases[st.workspace.active_canvas_id];
+      const schema = canvas?.schemas[canvas?.active_schema_id ?? ''];
       const entities = Object.fromEntries((schema?.entities ?? []).map(e => [e.id, e]));
       const links = Object.fromEntries((schema?.links ?? []).map(l => [l.id, l]));
       return createSchemaGraphKernel({ entities, links });
     },
     getSnapshot: () => canvasWrap.querySelector('svg') as SVGSVGElement,
   });
-  canvasWrap.appendChild(toolbar);
+  canvasWrap.appendChild(bottomBar);
+  
+  // Inject topBurger before schemaTabs element
+  schemaTabs.element.insertBefore(topBurger, schemaTabs.element.firstChild);
+  // Add margin to make sure it doesn't stick to the edge
+  topBurger.style.marginLeft = '8px';
 
   // Validation overlay
   const store = getGlobalReduxStore();
@@ -364,7 +371,8 @@ export const createCanvasPage = function() {
     if (reconciling) return;
     reconciling = true;
     try {
-      const schema = state.schemas[state.active_schema_id];
+      const canvas = state.workspace.canvases[state.workspace.active_canvas_id];
+      const schema = canvas?.schemas[canvas?.active_schema_id ?? ''];
       const reduxEntities = schema?.entities ?? [];
       const reduxEntityMap = new Map(reduxEntities.map(e => [e.id, e]));
       const domEntities = workspace.workspaceState.value.entities;
@@ -420,11 +428,30 @@ export const createCanvasPage = function() {
       // 4. Re-announce links that are in Redux but missing from DOM (tab switch / undo).
       const missingLinks = reduxLinks.filter(rl => !workspace.linkManager.getLink(rl.id));
       missingLinks.forEach(rl => getEntityManager().reannounceLink(rl.id));
+
+      // 5. Always refresh the minimap after reconcile so switching to an empty
+      //    schema clears stale thumbnails (no EntityCreated events fire otherwise).
+      minimap.refresh();
     } finally {
       reconciling = false;
     }
   };
-  const unsubReconcile = store.subscribe(runReconcile);
+  let prevCanvasId = store.get_state().workspace.active_canvas_id;
+
+  const unsubReconcile = store.subscribe((state) => {
+    const canvasId = state.workspace.active_canvas_id;
+    if (canvasId !== prevCanvasId) {
+      prevCanvasId = canvasId;
+      const newCanvas = state.workspace.canvases[canvasId];
+      if (newCanvas) {
+        viewport.panTo(newCanvas.viewport.pan.x, newCanvas.viewport.pan.y);
+        viewport.zoomTo(newCanvas.viewport.zoom);
+        const appearance = newCanvas.appearance_override ?? getAppearanceSettings();
+        applyAppearanceTokens(appearance?.entity, appearance?.link);
+      }
+    }
+    runReconcile(state);
+  });
   // Trigger immediately so persisted entities/links appear on page load without
   // requiring a Redux dispatch (the store does not fire subscribers on the initial load).
   runReconcile(store.get_state());
@@ -479,7 +506,8 @@ export const createCanvasPage = function() {
         initialSettings: { toolbox: getToolboxConfig(), shapes: getCustomShapes(), general: getGeneralSettings() || {}, appearance: getAppearanceSettings() || {} },
         getKernel: () => {
           const reduxSt = store.get_state();
-          const activeSchema = reduxSt.schemas[reduxSt.active_schema_id];
+          const activeCanvas = reduxSt.workspace.canvases[reduxSt.workspace.active_canvas_id];
+          const activeSchema = activeCanvas?.schemas[activeCanvas?.active_schema_id ?? ''];
           const entities = Object.fromEntries((activeSchema?.entities ?? []).map(e => [e.id, e]));
           const links = Object.fromEntries((activeSchema?.links ?? []).map(l => [l.id, l]));
           return createSchemaGraphKernel({ entities, links });

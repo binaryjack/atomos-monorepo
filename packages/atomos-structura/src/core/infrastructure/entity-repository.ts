@@ -5,24 +5,32 @@
 import { getGlobalReduxStore } from '../create-redux-store.js'
 import type { DomainEntity, DomainLink, EntityRepository, LinkRepository } from '../domain/entity-aggregate.js'
 
-/** Always routes to whichever schema is currently active. */
-const getSchemaId = (): string => getGlobalReduxStore().get_state().active_schema_id;
+/** Always routes to whichever schema is currently active in the active canvas. */
+const getSchemaId = (): string => {
+  const state = getGlobalReduxStore().get_state();
+  const canvas = state.workspace.canvases[state.workspace.active_canvas_id];
+  return canvas?.active_schema_id ?? 'schema-default';
+};
+
+const getActiveSchema = (schemaId: string) => {
+  const state = getGlobalReduxStore().get_state();
+  const canvas = state.workspace.canvases[state.workspace.active_canvas_id];
+  return canvas?.schemas[schemaId];
+};
 
 export const createPersistedEntityRepository = function(): EntityRepository {
   const store = getGlobalReduxStore();
 
   const getById = function(id: string): DomainEntity | undefined {
-    const state = store.get_state();
-    const schema = state.schemas[getSchemaId()];
+    const schema = getActiveSchema(getSchemaId());
     if (!schema) return undefined;
-    return schema.entities.find((e: any) => e.id === id) as unknown as DomainEntity;
+    return schema.entities.find((e) => e.id === id) as unknown as DomainEntity;
   };
 
   const save = function(entity: DomainEntity): void {
     const schemaId = getSchemaId();
-    const state = store.get_state();
-    const schema = state.schemas[schemaId];
-    const exists = schema?.entities.some((e: any) => e.id === entity.id);
+    const schema = getActiveSchema(schemaId);
+    const exists = schema?.entities.some((e) => e.id === entity.id);
 
     // Convert DomainEntity to Entity
     const reduxEntity = {
@@ -51,8 +59,7 @@ export const createPersistedEntityRepository = function(): EntityRepository {
   };
 
   const getAll = function(): readonly DomainEntity[] {
-    const state = store.get_state();
-    const schema = state.schemas[getSchemaId()];
+    const schema = getActiveSchema(getSchemaId());
     if (!schema) return [];
     return schema.entities as unknown as DomainEntity[];
   };
@@ -64,8 +71,7 @@ export const createPersistedLinkRepository = function(): LinkRepository {
   const store = getGlobalReduxStore();
 
   const getById = function(id: string): DomainLink | undefined {
-    const state = store.get_state();
-    const schema = state.schemas[getSchemaId()];
+    const schema = getActiveSchema(getSchemaId());
     if (!schema) return undefined;
 
     const link = schema.links.find((l: any) => l.id === id);
@@ -89,9 +95,8 @@ export const createPersistedLinkRepository = function(): LinkRepository {
 
   const save = function(link: DomainLink): void {
     const schemaId = getSchemaId();
-    const state = store.get_state();
-    const schema = state.schemas[schemaId];
-    const exists = schema?.links.some((l: any) => l.id === link.id);
+    const schema = getActiveSchema(schemaId);
+    const exists = schema?.links.some((l) => l.id === link.id);
 
     if (exists) {
       store.dispatch({
@@ -137,8 +142,7 @@ export const createPersistedLinkRepository = function(): LinkRepository {
   };
 
   const getAll = function(): readonly DomainLink[] {
-    const state = store.get_state();
-    const schema = state.schemas[getSchemaId()];
+    const schema = getActiveSchema(getSchemaId());
     if (!schema) return [];
 
     return schema.links.map((l: any) => ({

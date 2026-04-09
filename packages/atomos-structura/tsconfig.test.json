@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src/**/*", "tests/**/*", "vitest.config.ts"],
+  "references": [
+    { "path": "../atomos-structura-core" },
+    { "path": "../atomos-prime-style" },
+    { "path": "../atomos-prime" },
+    { "path": "../atomos-structura-mcp" }
+  ]
+}
