@@ -235,7 +235,7 @@ export const createInteractiveEntityDemo = function(workspace: WorkspaceManager)
         break;
       }
       case 'LinkRemoved': {
-        workspace.linkManager.removeLink(event.linkId);
+        workspace.removeLinkById(event.linkId, true);
         break;
       }
     }

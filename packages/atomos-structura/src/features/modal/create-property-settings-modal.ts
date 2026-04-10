@@ -48,7 +48,7 @@ export const createPropertySettingsModal = function(
   body.className = 'flex flex-col gap-4 p-4';
 
   // Footer - initially empty, will be populated on first open
-  const footer = document.createElement('atp-modal-footer');
+  const footer = Object.assign(document.createElement('div'), { className: 'vbs-toolbar' });
   footer.setAttribute('slot', 'footer');
 
   // Set up modal structure immediately

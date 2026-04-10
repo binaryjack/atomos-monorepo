@@ -1,4 +1,6 @@
-"use client";
+const fs = require('fs');
+
+const content = `"use client";
 
 import { useEffect, useRef } from "react";
 import { createCanvasPage } from "@atomos/structura/dist/preview/create-canvas-page.js";
@@ -70,3 +72,6 @@ export default function StructuraCanvas({ preset }: { preset?: string }) {
 
   return <div ref={containerRef} className="w-full h-full relative" />;
 }
+`;
+
+fs.writeFileSync('packages/showcase/src/components/StructuraCanvas.tsx', content);

@@ -5,6 +5,7 @@ import type { EntitySpawnFactory } from './entity-spawn-factory.types.js';
 import type { InteractiveBehaviorManager } from './interactive-behavior-manager.types.js';
 import type { LinkManager } from './link-manager.types.js';
 import type { EdgePosition } from '../../features/edge/types/edge-position.types.js';
+import type { AlignmentGuide } from '../../features/alignment/create-alignment-guides.js';
 
 export interface WorkspaceManager {
   readonly workspaceState: Signal<WorkspaceState>;
@@ -28,6 +29,7 @@ export interface WorkspaceManager {
   ) => void;
   readonly setEntitySpawnFactory: (factory: EntitySpawnFactory) => void;
   readonly appendToCanvas: (element: SVGElement) => void;
+  readonly removeLinkById: (linkId: string, skipPersistence?: boolean) => void;
   readonly restoreLink: (
     linkId: string,
     srcAnchorId: string,
@@ -42,6 +44,8 @@ export interface WorkspaceManager {
   readonly notifyAnchorHoverStart: (anchorId: string, entityId: string, edge: EdgePosition) => void;
   readonly notifyAnchorHoverEnd: () => void;
   readonly handleCanvasMouseMove: (event: MouseEvent) => void;
+  readonly updateAlignmentGuides: (draggingEntityId: string, position: { x: number; y: number }, dimensions: { width: number; height: number }) => AlignmentGuide[];
+  readonly clearAlignmentGuides: () => void;
   readonly cleanup: {
     readonly destroy: () => void;
   };

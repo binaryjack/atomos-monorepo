@@ -1,5 +1,6 @@
 import type { DomainEntity, DomainLink } from '../domain/entity-aggregate.js';
 import type { EntityManager } from '../presentation/entity-manager.js';
+import { determineOptimalEdges } from '../math/anchor-routing.js';
 
 export interface DAGExport {
   readonly version: string;
@@ -138,5 +139,51 @@ export const autoLayoutDAG = function(entityManager: EntityManager): void {
       const y = startY + (nodeIndex * VERTICAL_SPACING);
       entityManager.moveEntity(nodeId, { x, y });
     });
+  });
+};
+
+export const autoRouteLinks = function(entityManager: EntityManager): void {
+  const nodes = entityManager.getAllEntities();
+  const edges = entityManager.getAllLinks();
+  
+  // 1. Convert to easily queriable map
+  const nodeMap = new Map<string, DomainEntity>(nodes.map(n => [n.id, n]));
+  
+  edges.forEach(link => {
+    const src = nodeMap.get(link.sourceEntityId);
+    const dst = nodeMap.get(link.targetEntityId);
+    if (!src || !dst) return;
+    
+    const srcRect = {
+      x: src.position.x,
+      y: src.position.y,
+      width: src.dimensions.width,
+      height: src.dimensions.height
+    };
+
+    const dstRect = {
+      x: dst.position.x,
+      y: dst.position.y,
+      width: dst.dimensions.width,
+      height: dst.dimensions.height
+    };
+
+    // 2. Run the math to find best edges
+    const { srcEdge: bestSrcEdge, dstEdge: bestDstEdge } = determineOptimalEdges(srcRect, dstRect);
+    
+    // 3. Translate edges (e.g. 'top', 'left') back to specific Anchor IDs 
+    const newSrcAnchorId = `${src.id}-anchor-${bestSrcEdge}`;
+    const newDstAnchorId = `${dst.id}-anchor-${bestDstEdge}`;
+    
+    // 4. If different from current, update via standard Domain command
+    if (link.sourceAnchorId !== newSrcAnchorId || link.targetAnchorId !== newDstAnchorId) {
+      entityManager.updateLinkEndpoints(
+        link.id,
+        newSrcAnchorId,
+        newDstAnchorId,
+        link.sourceEntityId,
+        link.targetEntityId
+      );
+    }
   });
 };

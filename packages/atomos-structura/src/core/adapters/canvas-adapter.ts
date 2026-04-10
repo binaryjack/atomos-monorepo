@@ -14,7 +14,10 @@ export interface CanvasAdapter {
   readonly moveEntity: (entityId: string, x: number, y: number) => void;
   readonly resizeEntity: (entityId: string, width: number, height: number) => void;
   readonly updateEntityProperties: (entityId: string, properties: any[]) => void;
-  readonly updateEntityName: (entityId: string, name: string) => void;  readonly updateEntityMetadata: (entityId: string, metadata: { name?: string; description?: string; shape?: string; color?: string }) => void;  readonly removeEntity: (entityId: string) => void;
+  readonly updateEntityName: (entityId: string, name: string) => void;
+  readonly updateEntityCollapse: (entityId: string, collapsed: boolean) => void;
+  readonly updateEntityMetadata: (entityId: string, metadata: { name?: string; description?: string; shape?: string; color?: string }) => void;
+  readonly removeEntity: (entityId: string) => void;
   readonly getEntity: (entityId: string) => DomainEntity | undefined;
   readonly getAllEntities: () => readonly DomainEntity[];
   
@@ -67,6 +70,10 @@ export const createCanvasAdapter = function(): CanvasAdapter {
   
   const updateEntityName = function(entityId: string, name: string): void {
     entityManager.updateEntityName(entityId, name);
+  };
+  
+  const updateEntityCollapse = function(entityId: string, collapsed: boolean): void {
+    entityManager.updateEntityCollapse(entityId, collapsed);
   };
   
   const updateEntityMetadata = function(entityId: string, metadata: { name?: string; description?: string; shape?: string; color?: string }): void {
@@ -183,6 +190,7 @@ export const createCanvasAdapter = function(): CanvasAdapter {
     resizeEntity, 
     updateEntityProperties,
     updateEntityName,
+    updateEntityCollapse,
     updateEntityMetadata,
     removeEntity,
     getEntity,

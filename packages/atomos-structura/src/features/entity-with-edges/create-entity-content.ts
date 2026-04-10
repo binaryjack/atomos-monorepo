@@ -62,12 +62,18 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
 
   // ─── header ───────────────────────────────────────────────────────────────
   const labelSignal = createSignal(store.signal.value.name);
+  const isCollapsedSignal = createSignal(store.signal.value.collapsed ?? false);
 
   const header = createEntityHeader({
     color: props.color,
     label: labelSignal,
+    isCollapsed: isCollapsedSignal,
     onLabelChange: (v) => {
       store.updateLabel(v);
+    },
+    onToggleCollapse: () => {
+      const currentState = store.signal.value.collapsed ?? false;
+      store.updateCollapse(!currentState);
     },
     onSettingsClick: () => {
       props.onSettingsClick(store.signal.value.id);
@@ -224,21 +230,14 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
   };
 
   const recalcHeight = (entity: Entity): void => {
+    if (entity.collapsed) {
+      props.onHeightChange(HEADER_H);
+      return;
+    }
     const bodyRows = Math.max(entity.properties.length, MIN_BODY_ROWS);
     const total = HEADER_H + bodyRows * ROW_H + FOOTER_H;
     props.onHeightChange(total);
   };
-
-  // Initial render
-  renderRows(store.signal.value);
-
-  // Re-render on store change
-  const unsubStore = store.signal.subscribe((entity) => {
-    if (labelSignal.value !== entity.name) {
-      labelSignal.set(entity.name);
-    }
-    renderRows(entity);
-  });
 
   // ─── footer ───────────────────────────────────────────────────────────────
   const footer = createEntityFooter({
@@ -266,6 +265,36 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
   });
   cleanups.push(footer.cleanup.destroy);
   body.appendChild(footer.element);
+
+  // Initial render
+  renderRows(store.signal.value);
+  if (store.signal.value.collapsed) {
+    scrollBody.style.display = 'none';
+    footer.element.style.display = 'none';
+  } else {
+    scrollBody.style.display = '';
+    footer.element.style.display = 'flex';
+  }
+
+  // Re-render on store change
+  const unsubStore = store.signal.subscribe((entity) => {
+    if (labelSignal.value !== entity.name) {
+      labelSignal.set(entity.name);
+    }
+    const isCollapsed = entity.collapsed ?? false;
+    if (isCollapsedSignal.value !== isCollapsed) {
+      isCollapsedSignal.set(isCollapsed);
+      if (isCollapsed) {
+        scrollBody.style.display = 'none';
+        footer.element.style.display = 'none';
+      } else {
+        scrollBody.style.display = '';
+        footer.element.style.display = 'flex';
+      }
+      recalcHeight(entity);
+    }
+    renderRows(entity);
+  });
 
   const updateSize = (width: number, height: number): void => {
     fo.setAttribute('width',  width.toString());

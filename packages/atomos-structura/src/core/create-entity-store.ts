@@ -6,6 +6,7 @@ import { entityKey } from './registry-keys.js';
 export interface EntityStore {
   readonly signal: Signal<Entity>;
   readonly updateLabel: (label: string) => void;
+  readonly updateCollapse: (collapsed: boolean) => void;
   readonly addProperty: (prop: Property) => void;
   readonly removeProperty: (propKey: string) => void;
 }
@@ -17,6 +18,10 @@ export const createEntityStore = function(
 
   const updateLabel = (label: string): void => {
     signal.set({ ...signal.value, name: label, updatedAt: Date.now() });
+  };
+
+  const updateCollapse = (collapsed: boolean): void => {
+    signal.set({ ...signal.value, collapsed, updatedAt: Date.now() });
   };
 
   const addProperty = (prop: Property): void => {
@@ -35,5 +40,5 @@ export const createEntityStore = function(
     });
   };
 
-  return { signal, updateLabel, addProperty, removeProperty };
+  return { signal, updateLabel, updateCollapse, addProperty, removeProperty };
 };

@@ -417,7 +417,7 @@ export const createCanvasPage = function() {
       workspace.linkManager.links.value.forEach((_, linkId) => {
         if (!activeLinkIdSet.has(linkId)) staleLinkIds.push(linkId);
       });
-      staleLinkIds.forEach(linkId => workspace.linkManager.removeLink(linkId));
+      staleLinkIds.forEach(linkId => workspace.removeLinkById(linkId, true));
 
       // 3. Re-announce entities that are in Redux but missing from DOM.
       //    Uses reannounceEntity to fire EntityCreated without any Redux write,
@@ -426,7 +426,20 @@ export const createCanvasPage = function() {
       missing.forEach(re => getEntityManager().reannounceEntity(re.id));
 
       // 4. Re-announce links that are in Redux but missing from DOM (tab switch / undo).
-      const missingLinks = reduxLinks.filter(rl => !workspace.linkManager.getLink(rl.id));
+      const missingLinks = reduxLinks.filter(rl => {
+        const domLink = workspace.linkManager.getLink(rl.id);
+        if (!domLink) return true;
+        // If anchor IDs changed via Optimize Connections or Undo/Redo,
+        // the DOM link exists but points to stale anchors. Re-create it!
+        if (domLink.sourceAnchorId !== rl.leftAnchorId || domLink.targetAnchorId !== rl.rightAnchorId) {
+          const savedOnLinkDeleted = (workspace as any).onLinkDeleted;
+          (workspace as any).onLinkDeleted = null; // suppress cascading deletions
+          workspace.removeLinkById(rl.id, true);
+          (workspace as any).onLinkDeleted = savedOnLinkDeleted;
+          return true;
+        }
+        return false;
+      });
       missingLinks.forEach(rl => getEntityManager().reannounceLink(rl.id));
 
       // 5. Always refresh the minimap after reconcile so switching to an empty

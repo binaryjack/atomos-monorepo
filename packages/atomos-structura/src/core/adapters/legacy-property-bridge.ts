@@ -29,6 +29,7 @@ export const createLegacyEntityStoreBridge = function(entityId: string): EntityS
     id: initialEntity.id,
     code: initialEntity.id, // fallback
     name: initialEntity.name,
+    ...(initialEntity.collapsed !== undefined ? { collapsed: initialEntity.collapsed } : {}),
     properties: initialEntity.properties as Property[],
     position: initialEntity.position,
     dimensions: initialEntity.dimensions,
@@ -56,6 +57,7 @@ export const createLegacyEntityStoreBridge = function(entityId: string): EntityS
           id: updatedEntity.id,
           code: updatedEntity.id,
           name: updatedEntity.name,
+          ...(updatedEntity.collapsed !== undefined ? { collapsed: updatedEntity.collapsed } : {}),
           properties: updatedEntity.properties as Property[],
           position: updatedEntity.position,
           dimensions: updatedEntity.dimensions,
@@ -74,6 +76,11 @@ export const createLegacyEntityStoreBridge = function(entityId: string): EntityS
     adapter.updateEntityName(entityId, label);
   };
   
+  const updateCollapse = function(collapsed: boolean): void {
+    console.log(`[LegacyBridge] Toggling entity ${entityId} collapse state to ${collapsed} via clean architecture`);
+    adapter.updateEntityCollapse(entityId, collapsed);
+  };
+
   const addProperty = function(prop: Property): void {
     console.log(`[LegacyBridge] Adding property ${prop.key} to entity ${entityId} via clean architecture`);
     const currentEntity = adapter.getEntity(entityId);
@@ -95,7 +102,7 @@ export const createLegacyEntityStoreBridge = function(entityId: string): EntityS
   // Clean up subscription when entity store is destroyed
   (signal as any).__cleanup = unsubscribe;
   
-  return { signal, updateLabel, addProperty, removeProperty };
+  return { signal, updateLabel, updateCollapse, addProperty, removeProperty };
 };
 
 /**

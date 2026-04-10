@@ -1,5 +1,6 @@
 import type { Signal } from '@atomos/prime'
 import type { WorkspaceManager } from '../../core/types/workspace-manager.types.js'
+import { calculateSnappedPosition } from '../alignment/create-alignment-guides.js'
 
 export interface EntityDragBehaviorResult {
   readonly cleanup: () => void;
@@ -10,7 +11,8 @@ export const createEntityDragBehavior = function(
   position: Signal<{ x: number; y: number }>,
   selected: Signal<boolean>,
   workspace: WorkspaceManager,
-  entityId: string
+  entityId: string,
+  dimensions: Signal<{ width: number; height: number }>
 ): EntityDragBehaviorResult {
   let dragging = false;
   let didMove = false;
@@ -53,6 +55,7 @@ export const createEntityDragBehavior = function(
     const dy = svg.y - dragStart.svgY;
     if (!didMove && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
       didMove = true;
+      console.log('[DRAG-BEHAVIOR] Started dragging entity:', entityId);
     }
 
     if (queuedFrame !== null) {
@@ -62,22 +65,41 @@ export const createEntityDragBehavior = function(
     queuedFrame = requestAnimationFrame(() => {
       queuedFrame = null;
 
-      // Grid snapping: use CSS variable --vbs-grid-size or default to 16
-      const root = document.querySelector('.vbs-workspace, vbs-workspace') as HTMLElement || document.body;
-      let gridSize = 16;
-      if (root) {
-        const gridVar = getComputedStyle(root).getPropertyValue('--vbs-grid-size');
-        const parsed = parseInt(gridVar);
-        if (!isNaN(parsed) && parsed > 0) gridSize = parsed;
+      // Calculate raw position
+      let rawX = dragStart.posX + dx;
+      let rawY = dragStart.posY + dy;
+
+      // Get current dimensions for alignment guides
+      const currentDims = dimensions.value;
+      console.log('[DRAG-BEHAVIOR] Current dimensions:', currentDims);
+
+      // Calculate and show alignment guides
+      const guides = workspace.updateAlignmentGuides(entityId, { x: rawX, y: rawY }, currentDims);
+
+      // Check if we should snap to alignment guides
+      if (guides.length > 0) {
+        const snappedPos = calculateSnappedPosition(
+          { x: rawX, y: rawY },
+          currentDims,
+          guides
+        );
+        rawX = snappedPos.x;
+        rawY = snappedPos.y;
+      } else {
+        // Grid snapping only when no alignment guides are active
+        const root = document.querySelector('.vbs-workspace, vbs-workspace') as HTMLElement || document.body;
+        let gridSize = 16;
+        if (root) {
+          const gridVar = getComputedStyle(root).getPropertyValue('--vbs-grid-size');
+          const parsed = parseInt(gridVar);
+          if (!isNaN(parsed) && parsed > 0) gridSize = parsed;
+        }
+
+        rawX = Math.round(rawX / gridSize) * gridSize;
+        rawY = Math.round(rawY / gridSize) * gridSize;
       }
 
-      const rawX = dragStart.posX + dx;
-      const rawY = dragStart.posY + dy;
-
-      position.set({
-        x: Math.round(rawX / gridSize) * gridSize,
-        y: Math.round(rawY / gridSize) * gridSize
-      });
+      position.set({ x: rawX, y: rawY });
     });
   };
 
@@ -88,6 +110,10 @@ export const createEntityDragBehavior = function(
       cancelAnimationFrame(queuedFrame);
       queuedFrame = null;
     }
+    
+    // Clear alignment guides
+    workspace.clearAlignmentGuides();
+    
     if (!didMove) {
       // Pure click — select this entity
       selected.set(true);

@@ -27,6 +27,7 @@
     inset: -1px;
     border-radius: inherit;
     padding: 1px;
+    pointer-events: none;
     background: radial-gradient(150px circle at var(--mouse-x, 0%) var(--mouse-y, 0%),
         rgba(255, 255, 255, 0.9) 0%,
         rgba(59, 130, 246, 1) 10%,
@@ -79,5 +80,29 @@
   .vbs-canvas {
     @apply w-full h-full overflow-hidden relative;
     @apply select-none cursor-default;
+  }
+
+  /* Re-applied pixel-perfect modal and button updates */
+  .vbs-toolbar {
+    @apply flex items-center justify-end gap-2 pt-4 mt-6 w-full;
+    border-top: 1px solid var(--vbs-border, #27272a);
+  }
+
+  .vbs-btn {
+    @apply inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply rounded text-[13px] px-3;
+    min-height: var(--vbs-control-height, 28px);
+  }
+
+  .vbs-btn-primary {
+    @apply bg-blue-500 text-white hover:bg-blue-600 border border-transparent shadow-[0_0_8px_rgba(59,130,246,0.3)];
+  }
+
+  .vbs-btn-ghost {
+    @apply bg-transparent text-gray-400 hover:bg-white/5 border border-transparent hover:text-white;
+  }
+
+  .vbs-btn-secondary {
+    @apply bg-[#111111] border border-[#27272a] text-[#f4f4f5] hover:border-[#3f3f46] hover:bg-[#263348];
   }
 }

@@ -68,14 +68,21 @@ export const createSchemaTabs = function(): SchemaTabsResult {
     labelSpan.replaceWith(input);
     input.focus();
     input.select();
-    const commit = (): void => {
+    let committed = false;
+    const commit = (cancel = false): void => {
+      if (committed) return;
+      committed = true;
+      if (cancel) {
+        renderTabs();
+        return;
+      }
       const name = input.value.trim() || current;
       store.dispatch({ type: 'schema-renamed', id, name });
     };
-    input.addEventListener('blur', commit);
+    input.addEventListener('blur', () => commit());
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); commit(); }
-      if (e.key === 'Escape') { e.preventDefault(); renderTabs(); }
+      if (e.key === 'Escape') { e.preventDefault(); commit(true); }
     });
   };
 

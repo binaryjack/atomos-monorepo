@@ -204,7 +204,7 @@ export const openLinkSettingsModal = function(linkId: string): void {
   colorSection.appendChild(thicknessRow);
   body.appendChild(colorSection);
 
-  const footer = document.createElement('atp-modal-footer');
+  const footer = Object.assign(document.createElement('div'), { className: 'vbs-toolbar' });
   footer.setAttribute('slot', 'footer');
   
   const closeBtn = createButton({

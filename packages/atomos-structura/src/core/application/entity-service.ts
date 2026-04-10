@@ -42,6 +42,12 @@ export interface UpdateEntityNameCommand {
   readonly name: string;
 }
 
+export interface UpdateEntityCollapseCommand {
+  readonly type: 'UpdateEntityCollapse';
+  readonly entityId: string;
+  readonly collapsed: boolean;
+}
+
 export interface UpdateEntityMetadataCommand {
   readonly type: 'UpdateEntityMetadata';
   readonly entityId: string;
@@ -64,6 +70,7 @@ export type EntityCommand =
   | ResizeEntityCommand
   | UpdateEntityPropertiesCommand
   | UpdateEntityNameCommand
+  | UpdateEntityCollapseCommand
   | UpdateEntityMetadataCommand
   | RemoveEntityCommand;
 
@@ -164,6 +171,12 @@ export interface EntityNameUpdatedEvent {
   readonly name: string;
 }
 
+export interface EntityCollapseUpdatedEvent {
+  readonly type: 'EntityCollapseUpdated';
+  readonly entityId: string;
+  readonly collapsed: boolean;
+}
+
 export interface EntityMetadataUpdatedEvent {
   readonly type: 'EntityMetadataUpdated';
   readonly entityId: string;
@@ -186,6 +199,7 @@ export type EntityEvent =
   | EntityResizedEvent 
   | EntityPropertiesUpdatedEvent
   | EntityNameUpdatedEvent
+  | EntityCollapseUpdatedEvent
   | EntityMetadataUpdatedEvent
   | EntityRemovedEvent;
 
@@ -310,6 +324,22 @@ export const createEntityApplicationService = function(
           type: 'EntityNameUpdated',
           entityId: command.entityId,
           name: command.name
+        });
+        break;
+      }
+
+      case 'UpdateEntityCollapse': {
+        const entity = repository.getById(command.entityId);
+        if (!entity) throw new Error(`Entity ${command.entityId} not found`);
+        
+        import('../domain/entity-aggregate.js').then(mod => {
+          const updatedEntity = mod.updateEntityCollapse(entity, command.collapsed);
+          repository.save(updatedEntity);
+          eventBus.publish({
+            type: 'EntityCollapseUpdated',
+            entityId: command.entityId,
+            collapsed: command.collapsed
+          });
         });
         break;
       }

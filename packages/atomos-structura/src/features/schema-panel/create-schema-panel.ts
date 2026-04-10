@@ -6,6 +6,8 @@ import type { CanvasViewport } from '../../core/create-canvas-viewport.js'
 import type { DomainEntity } from '../../core/domain/entity-aggregate.js'
 import type { InteractiveBehaviorManager } from '../../core/types/interactive-behavior-manager.types.js'
 import { createPropertySettingsModal } from '../modal/create-property-settings-modal.js'
+import { getEntityManager } from '../../core/presentation/entity-manager.js'
+import { loadPreset, PRESET_KEYS } from './schema-presets.js'
 
 export interface SchemaPanelProps {
   readonly dagObserver: DAGObserver;
@@ -131,7 +133,7 @@ export const createSchemaPanel = function(props: SchemaPanelProps): SchemaPanelR
 
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
-  searchInput.placeholder = 'Search…';
+  searchInput.placeholder = 'Search...';
   searchInput.spellcheck = false;
   searchInput.style.cssText = css(
     'flex:1', 'min-width:0',
@@ -140,9 +142,39 @@ export const createSchemaPanel = function(props: SchemaPanelProps): SchemaPanelR
     'font-size:11px', 'padding:3px 6px', 'outline:none',
   );
 
+  const presetSelect = document.createElement('select');
+  presetSelect.title = 'Load architecture preset';
+  presetSelect.style.cssText = css(
+    'flex-shrink:0', 'width:24px', 'height:24px',
+    'background:transparent', 'color:#94a3b8',
+    'border:1px solid transparent', 'border-radius: var(--vbs-radius, 2px)',
+    'font-size:11px', 'outline:none', 'cursor:pointer', 'appearance:none',
+    'text-align:center'
+  );
+  presetSelect.onmouseenter = () => { presetSelect.style.background = 'var(--vbs-bg-panel, #111111)'; presetSelect.style.color = '#f8fafc'; };
+  presetSelect.onmouseleave = () => { presetSelect.style.background = 'transparent'; presetSelect.style.color = '#94a3b8'; };
+  
+  // A nice SVG icon for the collapsed state, overriding standard generic select arrow
+  presetSelect.style.backgroundImage = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-8"/><path d="m15 15-3 3-3-3"/><path d="M18 9h-2"/><path d="m18 13-2-2"/><path d="m18 5-2 2"/><path d="M8 9H6"/><path d="m8 13-2-2"/><path d="m8 5-2 2"/></svg>')`;
+  presetSelect.style.backgroundRepeat = 'no-repeat';
+  presetSelect.style.backgroundPosition = 'center';
+  
+  presetSelect.innerHTML = `<option value="" disabled selected hidden>Presets</option>` + 
+    PRESET_KEYS.map(k => `<option value="${k}">${k}</option>`).join('');
+    
+  presetSelect.onchange = () => {
+    if (presetSelect.value) {
+      const entityManager = getEntityManager();
+      loadPreset(entityManager, presetSelect.value);
+      setTimeout(() => props.viewport.reset(), 100);
+      presetSelect.value = '';
+    }
+  };
+
   headerExpanded.appendChild(collapseBtn);
   headerExpanded.appendChild(titleEl);
   headerExpanded.appendChild(searchInput);
+  headerExpanded.appendChild(presetSelect);
 
   // ── Header (collapsed strip) ──────────────────────────────────────────────
   const headerCollapsed = document.createElement('div');

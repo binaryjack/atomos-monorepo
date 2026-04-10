@@ -1,4 +1,4 @@
-import { autoLayoutDAG, deserializeDAG, serializeDAG } from '../core/application/dag-service.js';
+import { autoLayoutDAG, autoRouteLinks, deserializeDAG, serializeDAG } from '../core/application/dag-service.js';
 import type { CanvasViewport } from '../core/create-canvas-viewport.js';
 import type { EntityManager } from '../core/presentation/entity-manager.js';
 import { getGlobalReduxStore } from '../core/create-redux-store.js';
@@ -96,7 +96,7 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
   
   // -- File Operations --
   const exportBtn = createIconButton(
-    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
+    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
     'Export DAG',
     () => {
       const json = serializeDAG(entityManager);
@@ -124,7 +124,7 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
     importInput.value = '';
   };
   const importBtn = createIconButton(
-    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
     'Import & Restore Layout',
     () => importInput.click()
   );
@@ -132,7 +132,13 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
   const autoLayoutBtn = createIconButton(
     `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`,
     'Auto-Layout Nodes',
-    () => { autoLayoutDAG(entityManager); centerToSchema(); }
+    () => { autoLayoutDAG(entityManager); autoRouteLinks(entityManager); centerToSchema(); }
+  );
+
+  const optimizeConnectionsBtn = createIconButton(
+    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4"/><path d="M14 10l6-6"/><path d="M8 20H4v-4"/><path d="M10 14l-6 6"/><path d="M4 4h4v4"/><path d="M10 10 4 4"/><path d="M20 20h-4v-4"/><path d="M14 14l6 6"/></svg>`,
+    'Optimize Connections',
+    () => { autoRouteLinks(entityManager); }
   );
 
   // -- Viewport Controls --
@@ -172,7 +178,7 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
 
   // -- Schema Export Dropdown (plugin-driven) --
   const schemaExportWrap = document.createElement('div');
-  schemaExportWrap.style.cssText = 'position:relative;display:flex;';
+  schemaExportWrap.style.cssText = 'position:relative;display:flex;flex-direction:column;width:100%;';
 
   const schemaExportBtn = document.createElement('button');
   schemaExportBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
@@ -185,21 +191,11 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
   schemaExportBtn.onmouseover = () => { schemaExportBtn.style.background = 'var(--vbs-bg-panel, #111111)'; schemaExportBtn.style.color = '#f8fafc'; };
   schemaExportBtn.onmouseout  = () => { schemaExportBtn.style.background = 'transparent'; schemaExportBtn.style.color = 'var(--vbs-text-secondary, #a1a1aa)'; };
 
-  const schemaExportPanel = document.createElement('div');
-  schemaExportPanel.style.cssText = [
-    'display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);',
-    'background:rgba(15,23,42,0.98);backdrop-filter:blur(8px);',
-    'border:1px solid #27272a;border-radius:10px;padding:6px;min-width:220px;',
-    'box-shadow:0 -10px 15px -3px rgba(0,0,0,0.4);z-index:50;',
-  ].join('');
+  const dropdownList = document.createElement('div');
+  dropdownList.style.cssText = 'display:none;flex-direction:column;gap:4px;padding:4px 0 4px 12px;margin-top:4px;border-left:1px solid var(--vbs-border, #27272a);';
 
   const buildSchemaExportPanel = (): void => {
-    schemaExportPanel.innerHTML = '';
-    const header = document.createElement('div');
-    header.style.cssText = 'padding:4px 8px 6px;font-size:11px;color:#64748b;font-family:system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #1e293b;margin-bottom:4px;';
-    header.textContent = 'Export Schema As…';
-    schemaExportPanel.appendChild(header);
-
+    dropdownList.innerHTML = '';
     getExportPlugins().forEach(plugin => {
       const row = document.createElement('button');
       row.style.cssText = [
@@ -211,7 +207,7 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
       row.onmouseout  = () => { row.style.background = 'transparent'; };
       row.onclick = (e) => {
         e.stopPropagation();
-        schemaExportPanel.style.display = 'none';
+        dropdownList.style.display = 'none';
         const snapshot = config.getKernel().getSnapshot();
         try {
           const content = plugin.generate(snapshot);
@@ -227,7 +223,7 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
       lbl.textContent = plugin.label;
       row.appendChild(extBadge);
       row.appendChild(lbl);
-      schemaExportPanel.appendChild(row);
+      dropdownList.appendChild(row);
     });
   };
 
@@ -237,18 +233,18 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
     schemaExportOpen = !schemaExportOpen;
     if (schemaExportOpen) {
       buildSchemaExportPanel();
-      schemaExportPanel.style.display = 'block';
+      dropdownList.style.display = 'flex';
     } else {
-      schemaExportPanel.style.display = 'none';
+      dropdownList.style.display = 'none';
     }
   };
   document.addEventListener('click', () => {
     schemaExportOpen = false;
-    schemaExportPanel.style.display = 'none';
+    dropdownList.style.display = 'none';
   });
 
   schemaExportWrap.appendChild(schemaExportBtn);
-  schemaExportWrap.appendChild(schemaExportPanel);
+  schemaExportWrap.appendChild(dropdownList);
 
   // -- Workspace Save/Load --
   const workspaceLoadInput = document.createElement('input');
@@ -387,6 +383,7 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
   moreMenu.appendChild(importBtn);
   moreMenu.appendChild(exportBtn);
   moreMenu.appendChild(autoLayoutBtn);
+  moreMenu.appendChild(optimizeConnectionsBtn);
   moreMenu.appendChild(hDivider());
   moreMenu.appendChild(saveWorkspaceBtn);
   moreMenu.appendChild(loadWorkspaceBtn);

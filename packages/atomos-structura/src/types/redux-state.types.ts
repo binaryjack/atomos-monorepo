@@ -39,6 +39,7 @@ export interface ReduxState {
 export type ReduxAction =
   | { type: 'entity-moved'; schema_id: string; entity_id: string; x: number; y: number }
   | { type: 'entity-resized'; schema_id: string; entity_id: string; width: number; height: number }
+  | { type: 'entity-toggled-collapse'; schema_id: string; entity_id: string; collapsed: boolean }
   | { type: 'entity-updated'; schema_id: string; entity: Entity }
   | { type: 'entity-added'; schema_id: string; entity: Entity }
   | { type: 'entity-removed'; schema_id: string; entity_id: string }

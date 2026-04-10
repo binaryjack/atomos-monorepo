@@ -5,7 +5,9 @@ import { createIcon } from '@atomos/prime';
 
 export interface EntityHeaderProps {
   readonly label: Signal<string>;
+  readonly isCollapsed: Signal<boolean>;
   readonly onLabelChange: (value: string) => void;
+  readonly onToggleCollapse: () => void;
   readonly onSettingsClick: () => void;
   readonly onDeleteClick: () => void;
   readonly color?: string | undefined;
@@ -48,6 +50,27 @@ export const createEntityHeader = function(props: EntityHeaderProps): EntityHead
   editableLabel.element.style.fontWeight = 'var(--vbs-entity-name-font-weight, bold)';
   cleanups.push(editableLabel.cleanup.destroy);
 
+  // Collapse button
+  const collapseIcon = createIcon({ name: 'arrow-down', size: 'var(--vbs-entity-name-font-size, 14px)', color: contrast.mutedColor });
+  const collapseBtn = document.createElement('button');
+  collapseBtn.type = 'button';
+  collapseBtn.style.cssText = 'flex-shrink:0;background:none;border:none;cursor:pointer;padding:2px;display:flex;border-radius: var(--vbs-radius, 2px); transition: transform 0.2s ease;';
+  collapseBtn.title = 'Toggle collapse';
+  collapseBtn.appendChild(collapseIcon.element);
+  collapseBtn.addEventListener('click', props.onToggleCollapse);
+  const stopCollapseMd = (e: Event): void => e.stopPropagation();
+  collapseBtn.addEventListener('mousedown', stopCollapseMd);
+  const unsubCollapse = props.isCollapsed.subscribe(collapsed => {
+    collapseBtn.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+  });
+  
+  cleanups.push(() => {
+    collapseBtn.removeEventListener('click', props.onToggleCollapse);
+    collapseBtn.removeEventListener('mousedown', stopCollapseMd);
+    collapseIcon.cleanup.destroy();
+    unsubCollapse();
+  });
+
   // Settings button
   const settingsIcon = createIcon({ name: 'settings', size: 'var(--vbs-entity-name-font-size, 14px)', color: contrast.mutedColor });
   const settingsBtn = document.createElement('button');
@@ -83,6 +106,7 @@ export const createEntityHeader = function(props: EntityHeaderProps): EntityHead
     deleteIcon.cleanup.destroy();
   });
 
+  header.appendChild(collapseBtn);
   header.appendChild(editableLabel.element);
   header.appendChild(settingsBtn);
   header.appendChild(deleteBtn);

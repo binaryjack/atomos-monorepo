@@ -173,7 +173,7 @@ export const createValidationModal = function(
     }
 
     // Footer
-    const footer = document.createElement('atp-modal-footer');
+    const footer = Object.assign(document.createElement('div'), { className: 'vbs-toolbar' });
     footer.setAttribute('slot', 'footer');
 
     // Wire up buttons definitions

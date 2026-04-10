@@ -21,6 +21,7 @@ export interface DomainEntity {
   readonly shape?: string | undefined;
   readonly color?: string | undefined;
   readonly properties: readonly Property[];
+  readonly collapsed?: boolean | undefined;
   readonly position: EntityPosition;
   readonly dimensions: EntityDimensions;
   readonly createdAt: number;
@@ -108,6 +109,17 @@ export const updateEntityMetadata = function(
   return {
     ...entity,
     ...metadata,
+    updatedAt: Date.now()
+  };
+};
+
+export const updateEntityCollapse = function(
+  entity: DomainEntity,
+  collapsed: boolean
+): DomainEntity {
+  return {
+    ...entity,
+    collapsed,
     updatedAt: Date.now()
   };
 };

@@ -80,6 +80,17 @@ const reduce_state = function(state: ReduxState, action: ReduxAction): ReduxStat
       );
     }
 
+    case 'entity-toggled-collapse': {
+      return updateActiveCanvas(state, canvas =>
+        updateSchemaInCanvas(canvas, action.schema_id, schema => {
+          const entities = schema.entities.map(e =>
+            e.id === action.entity_id ? { ...e, collapsed: action.collapsed } : e
+          );
+          return { ...schema, entities };
+        })
+      );
+    }
+
     case 'entity-updated': {
       return updateActiveCanvas(state, canvas =>
         updateSchemaInCanvas(canvas, action.schema_id, schema => {

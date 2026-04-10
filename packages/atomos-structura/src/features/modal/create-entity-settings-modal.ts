@@ -36,7 +36,7 @@ export const createEntitySettingsModal = function(entityId: string): AtpModal {
   const body = document.createElement('div');
   body.className = 'flex flex-col gap-4 p-4';
 
-  const footer = document.createElement('atp-modal-footer');
+  const footer = Object.assign(document.createElement('div'), { className: 'vbs-toolbar' });
   footer.setAttribute('slot', 'footer');
 
   modal.appendChild(header);
@@ -193,7 +193,8 @@ export const createEntitySettingsModal = function(entityId: string): AtpModal {
     const addPropBtn = document.createElement('button');
     addPropBtn.type = 'button';
     addPropBtn.textContent = '+ Add Property';
-    addPropBtn.style.cssText = 'background:#2563eb; color:white; border:none; padding:4px 8px; border-radius: var(--vbs-radius, 2px); font-size:12px; cursor:pointer; font-weight:600;';
+    addPropBtn.className = 'vbs-btn vbs-btn-primary';
+    addPropBtn.style.cssText = 'padding: 4px 8px; font-size: 12px; height: 24px; min-height: 24px;';
     
     propHeader.appendChild(propTitle);
     propHeader.appendChild(addPropBtn);

@@ -9,6 +9,7 @@ import { injectDesignSystemTokens } from './presentation/design-system.js';
 import type { EntitySpawnFactory } from './types/entity-spawn-factory.types.js';
 import type { WorkspaceManager } from './types/workspace-manager.types.js';
 import type { WorkspaceState } from './types/workspace-state.types.js';
+import { createAlignmentGuides, calculateAlignmentGuides, calculateSnappedPosition } from '../features/alignment/create-alignment-guides.js';
 
 export const createWorkspaceManager = function(
   svgContainer: SVGSVGElement,
@@ -19,6 +20,19 @@ export const createWorkspaceManager = function(
   const linkManager      = createLinkManager();
   const transformer      = createCoordinateTransformer(svgContainer, contentRoot);
   const registry         = createEntityRegistry(contentRoot);
+  const alignmentGuides  = createAlignmentGuides();
+  
+  console.log('[WORKSPACE-MANAGER] Alignment guides created:', alignmentGuides);
+  
+  // Add alignment guides to canvas (behind entities)
+  if (contentRoot.firstChild) {
+    contentRoot.insertBefore(alignmentGuides.element, contentRoot.firstChild);
+    console.log('[WORKSPACE-MANAGER] Alignment guides inserted before first child');
+  } else {
+    contentRoot.appendChild(alignmentGuides.element);
+    console.log('[WORKSPACE-MANAGER] Alignment guides appended to content root');
+  }
+  
   const linkFinalizer    = createLinkFinalizer(linkManager, registry.workspaceState, contentRoot, (link, isReconnect) => {
     // Forward to workspace manager's onLinkCreated callback if set
     console.log('[WORKSPACE-MANAGER] Link created via finalizer:', link, { isReconnect });
@@ -95,6 +109,10 @@ export const createWorkspaceManager = function(
     setEntitySpawnFactory: (factory) => { spawnFactory = factory; },
     appendToCanvas:        (element) => { contentRoot.appendChild(element); },
 
+    removeLinkById: (linkId, skipPersistence) => {
+      linkFinalizer.removeLinkById(linkId, skipPersistence);
+    },
+
     restoreLink: (linkId, srcAnchorId, srcPos, srcEntityId, srcEdge, dstAnchorId, dstPos, dstEntityId, dstEdge) => {
       // Restore a persisted link using the internal link finalizer
       // Pass isRestoration=true to prevent triggering persistence callbacks
@@ -111,12 +129,40 @@ export const createWorkspaceManager = function(
 
     handleCanvasMouseMove: canvasEvents.handleCanvasMouseMove,
 
+    // Alignment guides support
+    updateAlignmentGuides: (draggingEntityId: string, position: { x: number; y: number }, dimensions: { width: number; height: number }) => {
+      console.log('[WORKSPACE] updateAlignmentGuides called for:', draggingEntityId, position, dimensions);
+      const otherEntities = Array.from(registry.workspaceState.value.entities.values())
+        .filter(e => e.id !== draggingEntityId)
+        .map(e => ({
+          id: e.id,
+          x: e.position.value.x,
+          y: e.position.value.y,
+          width: e.dimensions.value.width,
+          height: e.dimensions.value.height
+        }));
+      
+      const guides = calculateAlignmentGuides(
+        draggingEntityId,
+        { x: position.x, y: position.y, width: dimensions.width, height: dimensions.height },
+        otherEntities
+      );
+      
+      alignmentGuides.showGuides(guides);
+      return guides;
+    },
+    
+    clearAlignmentGuides: () => {
+      alignmentGuides.hideGuides();
+    },
+
     cleanup: {
       destroy: () => {
         canvasEvents.cleanup.destroy();
         linkFinalizer.cleanup.destroy();
         behaviorManager.cleanup.destroy();
         linkManager.cleanup.destroy();
+        alignmentGuides.cleanup();
         registry.workspaceState.value.entities.forEach(e => e.cleanup());
       }
     }

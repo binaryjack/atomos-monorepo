@@ -17,6 +17,7 @@ export interface EntityManager {
   readonly resizeEntity: (entityId: string, dimensions: EntityDimensions) => void;
   readonly updateEntityProperties: (entityId: string, properties: readonly Property[]) => void;
   readonly updateEntityName: (entityId: string, name: string) => void;
+  readonly updateEntityCollapse: (entityId: string, collapsed: boolean) => void;
   readonly updateEntityMetadata: (entityId: string, metadata: { name?: string; description?: string; shape?: string; color?: string }) => void;
   readonly removeEntity: (entityId: string) => void;
   
@@ -119,6 +120,14 @@ export const createEntityManager = function(): EntityManager {
       type: 'UpdateEntityName',
       entityId,
       name
+    });
+  };
+
+  const updateEntityCollapse = function(entityId: string, collapsed: boolean): void {
+    applicationService.executeCommand({
+      type: 'UpdateEntityCollapse',
+      entityId,
+      collapsed
     });
   };
 
@@ -264,6 +273,7 @@ export const createEntityManager = function(): EntityManager {
     resizeEntity,
     updateEntityProperties,
     updateEntityName,
+    updateEntityCollapse,
     updateEntityMetadata,
     removeEntity,
     getEntity,

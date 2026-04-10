@@ -129,9 +129,9 @@ export const createEntityPropertyRow = function(
   const row = document.createElement('div');
   row.style.cssText = [
     'display:flex', 'align-items:center', 'gap:4px',
-    'padding:4px 8px',
+    'padding:2px 8px',
     'box-sizing:border-box',
-    'min-height:calc(var(--vbs-entity-props-font-size, 12px) + 24px)',
+    'min-height:28px',
     'border-bottom:1px solid var(--vbs-border, #27272a)',
   ].join(';');
 

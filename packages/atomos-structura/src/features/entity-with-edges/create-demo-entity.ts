@@ -31,6 +31,40 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
   // We need to re-bind drag behavior if content changes
   let dragCleanup: (() => void) | null = null;
 
+  // --- Geometry sync ---
+  // Create visual dimensions FIRST before buildContent, so drag behavior can use it
+  const _visualDimensions = createSignal<{width: number, height: number}>(props.dimensions.value);
+  
+  // Create a proxy signal that reads from _visualDimensions but writes width back to props.dimensions
+  const visualDimensions = {
+    get value() { return _visualDimensions.value; },
+    set: (v: {width: number, height: number}) => {
+      // Allow width resizes to pass through to domain, but lock height if collapsed
+      if (props.entityStore.signal.value.collapsed) {
+         props.dimensions.set({ width: v.width, height: props.dimensions.value.height });
+      } else {
+         props.dimensions.set(v);
+      }
+    },
+    subscribe: _visualDimensions.subscribe
+  };
+
+  // Sync logical dimensions to visual dimensions considering collapse state
+  const updateVisualDimensions = () => {
+    const isCollapsed = props.entityStore.signal.value.collapsed;
+    const { width, height } = props.dimensions.value;
+    _visualDimensions.set({
+      width,
+      height: isCollapsed ? 36 : height
+    });
+  };
+  
+  // Call immediately on initialization to handle pre-collapsed entities
+  updateVisualDimensions();
+  
+  cleanups.push(props.dimensions.subscribe(updateVisualDimensions));
+  cleanups.push(props.entityStore.signal.subscribe(updateVisualDimensions));
+
   const buildContent = (shape?: string, color?: string) => {
     if (contentCleanup) {
       contentCleanup();
@@ -59,8 +93,11 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
         // the persisted height with the content minimum (e.g. 126), discarding the
         // user's resize on every page load.
         onHeightChange: (h) => {
-          if (h > props.dimensions.value.height) {
-            props.dimensions.set({ width: props.dimensions.value.width, height: h });
+          // While collapsed, logical dimensions remain untouched in storage.
+          if (!props.entityStore.signal.value.collapsed) {
+             if (h > props.dimensions.value.height) {
+               props.dimensions.set({ width: props.dimensions.value.width, height: h });
+             }
           }
         },
       });
@@ -112,12 +149,10 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
     }
 
     // Reattach drag behavior to new handles
-    const drag = createEntityDragBehavior(dragHandleElement, props.position, selected, props.workspace, props.id);
+    const drag = createEntityDragBehavior(dragHandleElement, props.position, selected, props.workspace, props.id, visualDimensions);
     dragCleanup = drag.cleanup;
 
-    // Resync geometry
-    const { width, height } = props.dimensions.value;
-    updateSize(width, height);
+    // Note: Don't call updateSize here - let syncGeometry() handle it with proper visual dimensions
   };
 
   buildContent(currentShape, currentColor);
@@ -126,10 +161,10 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
     if (contentCleanup) contentCleanup();
     if (dragCleanup) dragCleanup();
   });
-  // --- Geometry sync ---
+
   const syncGeometry = (): void => {
     const { x, y } = props.position.value;
-    const { width, height } = props.dimensions.value;
+    const { width, height } = visualDimensions.value;
     root.setAttribute('transform', `translate(${x},${y})`);
     if (updateSize) updateSize(width, height);
     resizeHandles.syncHandles(width, height, selected.value);
@@ -137,20 +172,20 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
   };
 
   // --- Selection ring ---
-  const selectionRing = createEntitySelectionRing(selected, props.dimensions);
+  const selectionRing = createEntitySelectionRing(selected, visualDimensions);
   root.appendChild(selectionRing.ring);
   cleanups.push(selectionRing.cleanup);
 
   // --- Resize handles ---
   const resizeHandles = createEntityResizeHandles(
-    props.position, props.dimensions, selected, props.workspace, props.shape
+    props.position, visualDimensions, selected, props.workspace, props.shape
   );
   resizeHandles.handles.forEach(h => root.appendChild(h));
   cleanups.push(resizeHandles.cleanup);
 
   // Wire geometry sync after sub-factories are constructed
   cleanups.push(props.position.subscribe(syncGeometry));
-  cleanups.push(props.dimensions.subscribe(syncGeometry));
+  cleanups.push(visualDimensions.subscribe(syncGeometry));
   cleanups.push(selected.subscribe(syncGeometry));
 
   // --- Edges ---
@@ -167,7 +202,7 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
       entityId: props.id,
       shape: props.shape as any,
       entityPosition: props.position,
-      entityDimensions: props.dimensions,
+      entityDimensions: visualDimensions,
       thickness: EDGE_THICKNESS,
       anchorId: anchorIds[side],
       onHover: (hovered) => {
@@ -203,7 +238,7 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
     id: props.id,
     element: root,
     position: props.position,
-    dimensions: props.dimensions,
+    dimensions: visualDimensions,
     cleanup: () => { cleanups.forEach(fn => fn()); cleanups.length = 0; },
     notifyAnchorConnected: (_anchorId, _linkId) => { /* visual state: TODO */ },
     updateMetadata: (metadata) => {
@@ -219,6 +254,7 @@ export const createDemoEntity = function(props: DemoEntityProps): DemoEntityResu
       if (needsRebuild) {
         // Rebuild the SVG view dynamically only if appearance drastically changes
         buildContent(currentShape, currentColor);
+        syncGeometry(); // Re-apply correct dimensions after rebuild
       }
     }
   };
