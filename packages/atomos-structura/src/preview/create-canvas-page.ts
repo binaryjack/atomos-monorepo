@@ -1,7 +1,7 @@
 ﻿import { getCanvasAdapter } from '../core/adapters/canvas-adapter.js'
 import { createDAGObserver } from '../core/adapters/dag-observer.js'
 import { getCustomShapes, getGeneralSettings, getToolboxConfig, setCustomShapes, setGeneralSettings, setToolboxConfig, getAppearanceSettings, setAppearanceSettings } from '../core/adapters/toolbox-config-manager.js'
-import { applyAppearanceTokens } from '../core/presentation/design-system.js'
+import { applyAppearanceTokens, injectDesignSystemTokens } from '../core/presentation/design-system.js'
 import { createCanvasViewport } from '../core/create-canvas-viewport.js'
 import { getGlobalReduxStore } from '../core/create-redux-store.js'
 import { createWorkspaceManager } from '../core/create-workspace-manager.js'
@@ -38,6 +38,10 @@ registerExportPlugin(mermaidPlugin);
 export const createCanvasPage = function(config?: WorkspaceConfig) {
   // Seed the global store with the runtime config before any subsystem uses it
   getGlobalReduxStore(config);
+  
+  // Inject design system CSS variables
+  injectDesignSystemTokens();
+  
   const cleanups: Array<() => void> = [];
 
   // Root — fills full viewport
