@@ -1,4 +1,4 @@
-import type { Entity, LinkProps } from '@atomos/structura-core'
+﻿import type { Entity, LinkProps, WorkspaceConfig } from '@atomos-web/structura-core'
 import type { AppSettings } from '../features/settings-page/types/settings-page.types.js'
 
 export interface SchemaModel {
@@ -27,6 +27,7 @@ export interface WorkspaceState {
   readonly version: string;
   readonly last_modified: string;
   readonly settings?: AppSettings;
+  readonly config?: WorkspaceConfig;
   readonly canvases: Record<string, CanvasModel>;
   readonly active_canvas_id: string;
 }
@@ -58,7 +59,8 @@ export type ReduxAction =
   | { type: 'canvas-deleted'; id: string }
   | { type: 'canvas-activated'; id: string }
   | { type: 'canvas-appearance-updated'; canvas_id: string; appearance: AppSettings['appearance'] }
-  | { type: 'state-loaded'; state: ReduxState };
+  | { type: 'state-loaded'; state: ReduxState }
+  | { type: 'state-reset' };
 
 export interface ReduxStore {
   readonly get_state: () => ReduxState;

@@ -1,4 +1,4 @@
-import type { Cardinality, LinkProps, RenderType } from '@atomos/structura-core'
+﻿import type { Cardinality, LinkProps, RenderType, WorkspaceConfig } from '@atomos-web/structura-core'
 import type { CanvasModel, ReduxAction, ReduxState, ReduxStore, SchemaModel } from '../types/redux-state.types.js'
 
 const DEFAULT_CANVAS_ID = 'canvas-default';
@@ -16,15 +16,18 @@ const makeDefaultCanvas = (id = DEFAULT_CANVAS_ID, name = 'Canvas 1'): CanvasMod
   viewport: { pan: { x: 0, y: 0 }, zoom: 1 },
 });
 
-const initial_state: ReduxState = {
+const make_initial_state = (config?: WorkspaceConfig): ReduxState => ({
   workspace: {
     name: 'Untitled Workspace',
     version: '1',
     last_modified: new Date().toISOString(),
+    ...(config ? { config } : {}),
     canvases: { [DEFAULT_CANVAS_ID]: makeDefaultCanvas() },
     active_canvas_id: DEFAULT_CANVAS_ID,
   },
-};
+});
+
+const initial_state: ReduxState = make_initial_state();
 
 // ── State helpers ─────────────────────────────────────────────────────────────
 
@@ -176,10 +179,14 @@ const reduce_state = function(state: ReduxState, action: ReduxAction): ReduxStat
     }
 
     case 'settings-toggled': {
+      if (state.workspace.config?.headless) return state;
       return { ...state, is_settings_open: action.is_open };
     }
 
     case 'schema-created': {
+      if (state.workspace.config?.allow_multiple_schemas === false
+        && Object.keys(state.workspace.canvases[state.workspace.active_canvas_id]?.schemas ?? {}).length >= 1
+      ) return state;
       return updateActiveCanvas(state, canvas => {
         if (canvas.schemas[action.id]) return canvas;
         const newSchema = makeDefaultSchema(action.id, action.name);
@@ -289,19 +296,23 @@ const reduce_state = function(state: ReduxState, action: ReduxAction): ReduxStat
       return action.state;
     }
 
+    case 'state-reset': {
+      return make_initial_state(state.workspace.config);
+    }
+
     default:
       return state;
   }
 };
 
-export const create_redux_store = function(): ReduxStore {
-  let current_state = initial_state;
+export const create_redux_store = function(config?: WorkspaceConfig): ReduxStore {
+  let current_state = make_initial_state(config);
   const listeners = new Set<(state: ReduxState) => void>();
 
   // Undo/redo history — never persisted, only lives in memory
   const HISTORY_LIMIT = 50;
   const SKIP_HISTORY = new Set<ReduxAction['type']>([
-    'viewport-updated', 'settings-toggled', 'settings-updated', 'state-loaded',
+    'viewport-updated', 'settings-toggled', 'settings-updated', 'state-loaded', 'state-reset',
     'canvas-activated', // switching canvases is not undoable
   ]);
   const history_past: ReduxState[] = [];
@@ -336,12 +347,16 @@ export const create_redux_store = function(): ReduxStore {
       }
     } catch (error) {
       console.error('❌ Failed to load Redux state:', error);
-      current_state = initial_state;
+      current_state = make_initial_state(config);
     }
     // Validity check: incompatible format (old flat state or corrupt) → start fresh
     if (!current_state.workspace) {
-      current_state = initial_state;
+      current_state = make_initial_state(config);
       return;
+    }
+    // Runtime config always wins over persisted config
+    if (config !== undefined) {
+      current_state = { ...current_state, workspace: { ...current_state.workspace, config } };
     }
     // Guarantee active canvas always has an entry
     if (!current_state.workspace.canvases[current_state.workspace.active_canvas_id]) {
@@ -415,9 +430,14 @@ export const create_redux_store = function(): ReduxStore {
 
 let globalReduxStore: ReduxStore | null = null;
 
-export const getGlobalReduxStore = function(): ReduxStore {
+export const getGlobalReduxStore = function(config?: WorkspaceConfig): ReduxStore {
   if (!globalReduxStore) {
-    globalReduxStore = create_redux_store();
+    globalReduxStore = create_redux_store(config);
   }
   return globalReduxStore;
+};
+
+/** Reset the global store — only for testing. */
+export const resetGlobalReduxStore = function(): void {
+  globalReduxStore = null;
 };

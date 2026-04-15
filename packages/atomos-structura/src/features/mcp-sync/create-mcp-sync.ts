@@ -1,4 +1,4 @@
-import type { Entity, LinkProps } from '@atomos/structura-core';
+﻿import type { Entity, LinkProps } from '@atomos-web/structura-core';
 import type { AppSettings } from '../settings-page/types/settings-page.types.js';
 import type { ReduxState, ReduxStore } from '../../types/redux-state.types.js';
 
@@ -17,7 +17,7 @@ interface McpWorkspaceEvent {
 
 export const createMcpSync = (
   store: ReduxStore,
-  mcpUrl = 'http://localhost:3001',
+  mcpUrl = 'http://localhost:9743',
 ): McpSyncResult => {
   let es: EventSource | null = null;
   let syncing = false;
