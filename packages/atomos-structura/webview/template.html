@@ -36,7 +36,8 @@
 
     initializeStructuraWebview({
       containerId: 'app',
-      // mcpServerUrl: 'http://localhost:9743',  // ← uncomment to enable MCP sync
+      mcpServerUrl: '${mcpUrl}',
+      schemaId: '${schemaId}',
     }).catch(err => console.error('[Structura] init failed', err))
   </script>
 </body>

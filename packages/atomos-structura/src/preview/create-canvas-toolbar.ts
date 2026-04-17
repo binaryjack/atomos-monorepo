@@ -4,8 +4,10 @@ import type { EntityManager } from '../core/presentation/entity-manager.js';
 import { getGlobalReduxStore } from '../core/create-redux-store.js';
 import type { SchemaGraphKernel } from '../core/create-schema-graph-kernel.js';
 import type { ReduxState } from '../types/redux-state.types.js';
+import { createAboutModal } from '../features/modal/create-about-modal.js';
 import { createCanvasSnapshot } from '../features/export/create-canvas-snapshot.js';
 import { getExportPlugins } from '../features/export/create-export-registry.js';
+import { PRESET_KEYS, loadPreset } from '../features/schema-panel/schema-presets.js';
 import type { MenuControl } from '../types/menu-control.types.js';
 import type { WorkspaceMenuConfig } from '@atomos-web/structura-core';
 
@@ -144,6 +146,57 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
     'Optimize Connections',
     () => { autoRouteLinks(entityManager); }
   );
+
+  // -- Presets Submenu --
+  const presetWrap = document.createElement('div');
+  presetWrap.style.cssText = 'position:relative;display:flex;flex-direction:column;width:100%;';
+
+  const presetTriggerBtn = document.createElement('button');
+  presetTriggerBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
+  presetTriggerBtn.title = 'Load Schema Preset…';
+  presetTriggerBtn.style.cssText = [
+    'display:flex;align-items:center;justify-content:center;',
+    'width:36px;height:36px;border:none;background:transparent;',
+    'color:var(--vbs-text-secondary, #a1a1aa);border-radius:var(--vbs-radius, 2px);cursor:pointer;transition:all 0.2s;'
+  ].join('');
+  presetTriggerBtn.onmouseover = () => { presetTriggerBtn.style.background = 'var(--vbs-bg-panel, #111111)'; presetTriggerBtn.style.color = '#f8fafc'; };
+  presetTriggerBtn.onmouseout  = () => { presetTriggerBtn.style.background = 'transparent'; presetTriggerBtn.style.color = 'var(--vbs-text-secondary, #a1a1aa)'; };
+
+  const presetList = document.createElement('div');
+  presetList.style.cssText = 'display:none;flex-direction:column;gap:2px;padding:4px 0 4px 12px;margin-top:4px;border-left:1px solid var(--vbs-border, #27272a);';
+
+  let presetListOpen = false;
+  const closePresets = () => { presetListOpen = false; presetList.style.display = 'none'; };
+
+  PRESET_KEYS.forEach(key => {
+    const row = document.createElement('button');
+    row.textContent = key;
+    row.style.cssText = [
+      'display:flex;align-items:center;width:100%;padding:7px 10px;',
+      'border:none;background:transparent;color:#cbd5e1;text-align:left;cursor:pointer;border-radius:6px;',
+      'font-family:system-ui,sans-serif;font-size:13px;transition:background 0.12s;',
+    ].join('');
+    row.onmouseover = () => { row.style.background = '#1e293b'; };
+    row.onmouseout  = () => { row.style.background = 'transparent'; };
+    row.onclick = (e) => {
+      e.stopPropagation();
+      loadPreset(entityManager, key);
+      setTimeout(() => viewport.reset(), 100);
+      closePresets();
+      menuOpen = false;
+      closeMenu();
+    };
+    presetList.appendChild(row);
+  });
+
+  presetTriggerBtn.onclick = (e) => {
+    e.stopPropagation();
+    presetListOpen = !presetListOpen;
+    presetList.style.display = presetListOpen ? 'flex' : 'none';
+  };
+
+  presetWrap.appendChild(presetTriggerBtn);
+  presetWrap.appendChild(presetList);
 
   // -- Viewport Controls --
   const zoomOutBtn = createIconButton(
@@ -388,6 +441,7 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
   moreMenu.appendChild(exportBtn);
   moreMenu.appendChild(autoLayoutBtn);
   moreMenu.appendChild(optimizeConnectionsBtn);
+  moreMenu.appendChild(presetWrap);
   moreMenu.appendChild(hDivider());
   moreMenu.appendChild(saveWorkspaceBtn);
   moreMenu.appendChild(loadWorkspaceBtn);
@@ -397,6 +451,13 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
   moreMenu.appendChild(exportPngBtn);
   moreMenu.appendChild(hDivider());
   moreMenu.appendChild(settingsBtn);
+
+  const aboutBtn = createIconButton(
+    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+    'About',
+    () => { menuOpen = false; closeMenu(); createAboutModal(document.body); }
+  );
+  moreMenu.appendChild(aboutBtn);
 
   topBurger.appendChild(burgerBtn);
   topBurger.appendChild(moreMenu);

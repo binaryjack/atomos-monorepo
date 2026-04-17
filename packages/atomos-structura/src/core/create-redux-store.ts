@@ -183,6 +183,23 @@ const reduce_state = function(state: ReduxState, action: ReduxAction): ReduxStat
       return { ...state, is_settings_open: action.is_open };
     }
 
+    case 'schema-create-auto': {
+      // Standalone fallback: generate an ID here when no dispatch hook intercepted this.
+      // When MCP is connected, a hook swallows this and the SSE delivers schema-created.
+      if (state.workspace.config?.allow_multiple_schemas === false
+        && Object.keys(state.workspace.canvases[state.workspace.active_canvas_id]?.schemas ?? {}).length >= 1
+      ) return state;
+      return updateActiveCanvas(state, canvas => {
+        const autoId = `schema-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const newSchema = makeDefaultSchema(autoId, action.name);
+        return {
+          ...canvas,
+          schemas: { ...canvas.schemas, [autoId]: newSchema },
+          active_schema_id: autoId,
+        };
+      });
+    }
+
     case 'schema-created': {
       if (state.workspace.config?.allow_multiple_schemas === false
         && Object.keys(state.workspace.canvases[state.workspace.active_canvas_id]?.schemas ?? {}).length >= 1
@@ -314,6 +331,7 @@ export const create_redux_store = function(config?: WorkspaceConfig): ReduxStore
   const SKIP_HISTORY = new Set<ReduxAction['type']>([
     'viewport-updated', 'settings-toggled', 'settings-updated', 'state-loaded', 'state-reset',
     'canvas-activated', // switching canvases is not undoable
+    'schema-create-auto', // intent-only; the resulting schema-created is the undoable state change
   ]);
   const history_past: ReduxState[] = [];
   const history_future: ReduxState[] = [];
@@ -376,9 +394,21 @@ export const create_redux_store = function(config?: WorkspaceConfig): ReduxStore
     return current_state;
   };
 
+  const dispatch_hooks = new Set<(action: ReduxAction) => ReduxAction | null>();
+
+  const addDispatchHook = function(hook: (action: ReduxAction) => ReduxAction | null): () => void {
+    dispatch_hooks.add(hook);
+    return () => dispatch_hooks.delete(hook);
+  };
+
   const dispatch = function(action: ReduxAction): void {
+    let finalAction: ReduxAction | null = action;
+    for (const hook of dispatch_hooks) {
+      finalAction = hook(finalAction!);
+      if (!finalAction) return; // swallowed by hook
+    }
     const previous_state = current_state;
-    current_state = reduce_state(current_state, action);
+    current_state = reduce_state(current_state, finalAction);
 
     if (current_state !== previous_state) {
       if (!is_reconciling && !SKIP_HISTORY.has(action.type)) {
@@ -425,7 +455,7 @@ export const create_redux_store = function(config?: WorkspaceConfig): ReduxStore
   // Load initial state
   load();
 
-  return { get_state, dispatch, subscribe, undo, redo, can_undo, can_redo, reconcile };
+  return { get_state, dispatch, subscribe, undo, redo, can_undo, can_redo, reconcile, addDispatchHook };
 };
 
 let globalReduxStore: ReduxStore | null = null;

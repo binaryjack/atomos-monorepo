@@ -56,6 +56,7 @@ export interface McpResponse {
 
 /** Payload emitted via the `change` SSE event. */
 export interface McpChangePayload {
+  readonly schema_id: string;
   readonly entities: Entity[];
   readonly links: LinkProps[];
 }
@@ -127,13 +128,19 @@ const get_active_schema = (state: McpWorkspaceState): SchemaModel | undefined =>
   return canvas ? canvas.schemas[canvas.active_schema_id] : undefined;
 };
 
-const update_active_schema = (
+/** Locate the canvas that owns the given schema ID (searches all canvases). */
+const find_canvas_for_schema = (state: McpWorkspaceState, schema_id: string): CanvasModel | undefined =>
+  Object.values(state.workspace.canvases).find(c => schema_id in c.schemas);
+
+/** Immutably update a specific schema by ID, locating it across all canvases. */
+const update_schema_by_id = (
   state: McpWorkspaceState,
+  schema_id: string,
   fn: (schema: SchemaModel) => SchemaModel,
 ): McpWorkspaceState => {
-  const canvas = get_active_canvas(state);
+  const canvas = find_canvas_for_schema(state, schema_id);
   if (!canvas) return state;
-  const schema = canvas.schemas[canvas.active_schema_id];
+  const schema = canvas.schemas[schema_id];
   if (!schema) return state;
   return {
     ...state,
@@ -142,12 +149,9 @@ const update_active_schema = (
       last_modified: new Date().toISOString(),
       canvases: {
         ...state.workspace.canvases,
-        [state.workspace.active_canvas_id]: {
+        [canvas.id]: {
           ...canvas,
-          schemas: {
-            ...canvas.schemas,
-            [canvas.active_schema_id]: fn(schema),
-          },
+          schemas: { ...canvas.schemas, [schema_id]: fn(schema) },
         },
       },
     },
@@ -272,57 +276,75 @@ const process_request = (srv: VbsMcpServerInstance, req: McpRequest): McpRespons
 // Entity handlers
 
 const handle_create_entity = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
-  const entity = req.params as Entity;
-  srv._state = update_active_schema(srv._state, s => ({
-    ...s, entities: [...s.entities.filter(e => e.id !== entity.id), entity],
+  const params = req.params as { schema_id?: string } & Entity;
+  const { schema_id, ...entity } = params;
+  if (!schema_id) return { error: { code: 400, message: 'schema_id is required' }, id: req.id };
+  if (!find_canvas_for_schema(srv._state, schema_id)) return { error: { code: 404, message: 'Schema not found' }, id: req.id };
+  srv._state = update_schema_by_id(srv._state, schema_id, s => ({
+    ...s, entities: [...s.entities.filter(e => e.id !== entity.id), entity as Entity],
   }));
-  const schema = get_active_schema(srv._state);
-  emit_sse(srv._clients, 'change', { entities: schema?.entities ?? [], links: schema?.links ?? [] });
+  const canvas = find_canvas_for_schema(srv._state, schema_id);
+  const schema = canvas?.schemas[schema_id];
+  emit_sse(srv._clients, 'change', { schema_id, entities: schema?.entities ?? [], links: schema?.links ?? [] });
   return { result: { success: true, entity }, id: req.id };
 };
 
 const handle_get_entity = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
-  const { entityId } = req.params as { entityId: string };
-  const entity = get_active_schema(srv._state)?.entities.find(e => e.id === entityId);
+  const { schema_id, entityId } = req.params as { schema_id?: string; entityId: string };
+  const schema = schema_id
+    ? find_canvas_for_schema(srv._state, schema_id)?.schemas[schema_id]
+    : get_active_schema(srv._state);
+  const entity = schema?.entities.find(e => e.id === entityId);
   if (!entity) return { error: { code: 404, message: 'Entity not found' }, id: req.id };
   return { result: { entity }, id: req.id };
 };
 
 const handle_update_entity = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
-  const entity = req.params as Entity;
-  const schema = get_active_schema(srv._state);
-  if (!schema?.entities.some(e => e.id === entity.id))
+  const params = req.params as { schema_id?: string } & Entity;
+  const { schema_id, ...entity } = params;
+  if (!schema_id) return { error: { code: 400, message: 'schema_id is required' }, id: req.id };
+  const canvas = find_canvas_for_schema(srv._state, schema_id);
+  const schema = canvas?.schemas[schema_id];
+  if (!schema?.entities.some(e => e.id === (entity as Entity).id))
     return { error: { code: 404, message: 'Entity not found' }, id: req.id };
-  srv._state = update_active_schema(srv._state, s => ({
-    ...s, entities: s.entities.map(e => e.id === entity.id ? entity : e),
+  srv._state = update_schema_by_id(srv._state, schema_id, s => ({
+    ...s, entities: s.entities.map(e => e.id === (entity as Entity).id ? entity as Entity : e),
   }));
-  const updated = get_active_schema(srv._state);
-  emit_sse(srv._clients, 'change', { entities: updated?.entities ?? [], links: updated?.links ?? [] });
+  const updatedCanvas = find_canvas_for_schema(srv._state, schema_id);
+  const updated = updatedCanvas?.schemas[schema_id];
+  emit_sse(srv._clients, 'change', { schema_id, entities: updated?.entities ?? [], links: updated?.links ?? [] });
   return { result: { success: true, entity }, id: req.id };
 };
 
 const handle_delete_entity = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
-  const { entityId } = req.params as { entityId: string };
-  const schema = get_active_schema(srv._state);
+  const { schema_id, entityId } = req.params as { schema_id?: string; entityId: string };
+  if (!schema_id) return { error: { code: 400, message: 'schema_id is required' }, id: req.id };
+  const canvas = find_canvas_for_schema(srv._state, schema_id);
+  const schema = canvas?.schemas[schema_id];
   if (!schema?.entities.some(e => e.id === entityId))
     return { error: { code: 404, message: 'Entity not found' }, id: req.id };
-  srv._state = update_active_schema(srv._state, s => ({
+  srv._state = update_schema_by_id(srv._state, schema_id, s => ({
     ...s,
     entities: s.entities.filter(e => e.id !== entityId),
     links: s.links.filter(l => l.leftEntityId !== entityId && l.rightEntityId !== entityId),
   }));
-  const updated = get_active_schema(srv._state);
-  emit_sse(srv._clients, 'change', { entities: updated?.entities ?? [], links: updated?.links ?? [] });
+  const updatedCanvas = find_canvas_for_schema(srv._state, schema_id);
+  const updated = updatedCanvas?.schemas[schema_id];
+  emit_sse(srv._clients, 'change', { schema_id, entities: updated?.entities ?? [], links: updated?.links ?? [] });
   return { result: { success: true }, id: req.id };
 };
 
 const handle_create_link = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
-  const link = req.params as LinkProps;
-  srv._state = update_active_schema(srv._state, s => ({
-    ...s, links: [...s.links.filter(l => l.id !== link.id), link],
+  const params = req.params as { schema_id?: string } & LinkProps;
+  const { schema_id, ...link } = params;
+  if (!schema_id) return { error: { code: 400, message: 'schema_id is required' }, id: req.id };
+  if (!find_canvas_for_schema(srv._state, schema_id)) return { error: { code: 404, message: 'Schema not found' }, id: req.id };
+  srv._state = update_schema_by_id(srv._state, schema_id, s => ({
+    ...s, links: [...s.links.filter(l => l.id !== (link as LinkProps).id), link as LinkProps],
   }));
-  const schema = get_active_schema(srv._state);
-  emit_sse(srv._clients, 'change', { entities: schema?.entities ?? [], links: schema?.links ?? [] });
+  const canvas = find_canvas_for_schema(srv._state, schema_id);
+  const schema = canvas?.schemas[schema_id];
+  emit_sse(srv._clients, 'change', { schema_id, entities: schema?.entities ?? [], links: schema?.links ?? [] });
   return { result: { success: true, link }, id: req.id };
 };
 
@@ -340,13 +362,23 @@ const handle_get_schema = (srv: VbsMcpServerInstance, req: McpRequest): McpRespo
 };
 
 const handle_sync_state = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
-  const { entities = [], links = [], settings, menu_config } = req.params as {
+  const { schema_id, entities = [], links = [], settings, menu_config } = req.params as {
+    schema_id?: string;
     entities?: Entity[];
     links?: LinkProps[];
     settings?: Record<string, unknown>;
     menu_config?: WorkspaceMenuConfig;
   };
-  srv._state = update_active_schema(srv._state, s => ({ ...s, entities: [...entities], links: [...links] }));
+  if (schema_id && find_canvas_for_schema(srv._state, schema_id)) {
+    srv._state = update_schema_by_id(srv._state, schema_id, s => ({ ...s, entities: [...entities], links: [...links] }));
+  } else {
+    // Fallback: sync into the active schema (browser always knows its active schema)
+    const activeCanvas = get_active_canvas(srv._state);
+    if (activeCanvas) {
+      const activeSchemaId = activeCanvas.active_schema_id;
+      srv._state = update_schema_by_id(srv._state, activeSchemaId, s => ({ ...s, entities: [...entities], links: [...links] }));
+    }
+  }
   if (settings !== undefined) {
     srv._state = {
       ...srv._state,

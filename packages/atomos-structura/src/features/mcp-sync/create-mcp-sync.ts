@@ -22,13 +22,14 @@ export const createMcpSync = (
   let es: EventSource | null = null;
   let syncing = false;
 
-  const applyChange = (data: { entities: Entity[]; links: LinkProps[] }): void => {
+  const applyChange = (data: { schema_id?: string; entities: Entity[]; links: LinkProps[] }): void => {
     if (syncing) return;
     syncing = true;
     try {
       const st = store.get_state();
       const activeCanvas = st.workspace.canvases[st.workspace.active_canvas_id];
-      const schemaId = activeCanvas?.active_schema_id ?? '';
+      // Use the schema_id from the SSE payload if provided, otherwise fall back to active
+      const schemaId = data.schema_id ?? activeCanvas?.active_schema_id ?? '';
       const schema = activeCanvas?.schemas[schemaId];
       const existingEntityIds = new Set((schema?.entities ?? []).map(e => e.id));
       const existingLinkIds = new Set((schema?.links ?? []).map(l => l.id));

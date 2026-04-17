@@ -371,6 +371,33 @@ export const createCanvasPage = function(config?: WorkspaceConfig, mcpServerUrl?
   try {
     const mcpSync = createMcpSync(store, mcpServerUrl);
     cleanups.push(mcpSync.cleanup);
+
+    // When MCP is connected, schema creation must be ID'd by the server, not the
+    // browser.  Register a dispatch hook that swallows `schema-create-auto` and
+    // delegates to the MCP `create-schema` tool instead.  The SSE response will
+    // deliver a canonical `schema-created` with the server-assigned ID.
+    if (mcpServerUrl) {
+      const removeMcpSchemaHook = store.addDispatchHook((action) => {
+        if (action.type === 'schema-create-auto') {
+          fetch(mcpServerUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              method: 'atomos-structura/create-schema',
+              params: { name: action.name },
+              id: `schema-auto-${Date.now()}`,
+            }),
+          }).catch(err => {
+            console.error('[Canvas] MCP create-schema failed, falling back to local ID:', err);
+            // Fallback: generate locally so the user is not stuck
+            store.dispatch({ type: 'schema-create-auto', name: action.name });
+          });
+          return null; // swallow — result will arrive via SSE
+        }
+        return action;
+      });
+      cleanups.push(removeMcpSchemaHook);
+    }
   } catch { /* noop */ }
 
   // Canvas reconciliation — syncs the DOM when undo/redo changes Redux state

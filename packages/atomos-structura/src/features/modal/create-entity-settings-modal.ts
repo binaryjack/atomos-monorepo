@@ -194,7 +194,7 @@ export const createEntitySettingsModal = function(entityId: string): AtpModal {
     addPropBtn.type = 'button';
     addPropBtn.textContent = '+ Add Property';
     addPropBtn.className = 'vbs-btn vbs-btn-primary';
-    addPropBtn.style.cssText = 'padding: 4px 8px; font-size: 12px; height: 24px; min-height: 24px;';
+    addPropBtn.style.cssText = 'padding: 4px 8px; font-size: 12px;';
     
     propHeader.appendChild(propTitle);
     propHeader.appendChild(addPropBtn);

@@ -50,6 +50,12 @@ export const atpModalStyle = `
   .body::-webkit-scrollbar-track { background: transparent; }
   .body::-webkit-scrollbar-thumb { background: var(--vbs-border, #27272a); border-radius: var(--vbs-radius, 2px); }
 
+  ::slotted([slot="footer"]) {
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--vbs-border, #27272a);
+    flex-shrink: 0;
+  }
+
   .dialog.spotlight-border {
     position: relative;
     border: 1px solid transparent;

@@ -211,7 +211,29 @@ export const createCanvasAdapter = function(): CanvasAdapter {
   };
 };
 
-// Global Singleton for Easy Access
+// Per-schema adapter registry — keyed by schema ID.
+// Use getCanvasAdapterFor(schemaId) in all application code.
+const adapterRegistry = new Map<string, CanvasAdapter>();
+
+/** Returns the adapter bound to the given schema ID, creating it on first access. */
+export const getCanvasAdapterFor = function(schemaId: string): CanvasAdapter {
+  let adapter = adapterRegistry.get(schemaId);
+  if (!adapter) {
+    adapter = createCanvasAdapter();
+    adapterRegistry.set(schemaId, adapter);
+    console.log(`🏗️ Canvas adapter created for schema: ${schemaId}`);
+  }
+  return adapter;
+};
+
+/** Releases the adapter for a schema (call when a schema tab is closed / schema deleted). */
+export const destroyCanvasAdapter = function(schemaId: string): void {
+  adapterRegistry.delete(schemaId);
+  console.log(`🗑️ Canvas adapter destroyed for schema: ${schemaId}`);
+};
+
+// Legacy singleton — kept for backward compatibility. Resolves to the 'default' slot.
+// Deprecated: prefer getCanvasAdapterFor(schemaId).
 let globalCanvasAdapter: CanvasAdapter | null = null;
 
 export const getCanvasAdapter = function(): CanvasAdapter {

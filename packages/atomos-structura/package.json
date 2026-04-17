@@ -1,6 +1,6 @@
 {
   "name": "@atomos-web/structura",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "license": "MIT",
   "type": "module",
   "publishConfig": {
@@ -20,7 +20,8 @@
     "./*": "./*"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node scripts/gen-version.mjs && tsc -p tsconfig.build.json",
+    "build:webview-iife": "BUILD_TARGET=webview-iife vite build",
     "dev": "tsc -p tsconfig.build.json --watch",
     "serve": "vite",
     "test": "vitest",

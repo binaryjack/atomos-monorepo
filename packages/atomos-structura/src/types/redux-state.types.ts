@@ -60,7 +60,12 @@ export type ReduxAction =
   | { type: 'canvas-activated'; id: string }
   | { type: 'canvas-appearance-updated'; canvas_id: string; appearance: AppSettings['appearance'] }
   | { type: 'state-loaded'; state: ReduxState }
-  | { type: 'state-reset' };
+  | { type: 'state-reset' }
+  /** Intent-only action: the UI wants a new schema but does not supply an ID.
+   *  In standalone mode the reducer generates one. When MCP is connected a
+   *  dispatch hook swallows this, calls the server, and the SSE response
+   *  delivers the canonical `schema-created` with the server-assigned ID. */
+  | { type: 'schema-create-auto'; name: string };
 
 export interface ReduxStore {
   readonly get_state: () => ReduxState;
@@ -71,4 +76,7 @@ export interface ReduxStore {
   readonly can_undo: () => boolean;
   readonly can_redo: () => boolean;
   readonly reconcile: (fn: () => void) => void;
+  /** Register a pre-dispatch hook. Return `null` to swallow the action;
+   *  return the action (possibly modified) to let it proceed. */
+  readonly addDispatchHook: (hook: (action: ReduxAction) => ReduxAction | null) => () => void;
 }

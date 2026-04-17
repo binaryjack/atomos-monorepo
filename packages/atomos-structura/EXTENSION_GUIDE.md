@@ -154,15 +154,16 @@ export function deactivate() {
 }
 ```
 
-### Update `buildHtml` to pass the MCP URL
+### Update `buildHtml` to pass the MCP URL and schema ID
 
-The `template.html` contains a commented-out `mcpServerUrl` placeholder. Interpolate it before sending the HTML to the webview:
+`template.html` ships with `${mcpUrl}` and `${schemaId}` injection tokens.  Replace them alongside the other tokens so each webview panel gets its own isolated MCP connection:
 
 ```ts
 function buildHtml(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
-  mcpServerUrl?: string
+  mcpServerUrl?: string,
+  schemaId?: string,
 ): string {
   const nonce = getNonce()
 
@@ -178,20 +179,80 @@ function buildHtml(
     'node_modules', '@atomos-web', 'structura', 'webview', 'template.html'
   )
 
-  let html = fs.readFileSync(templatePath.fsPath, 'utf8')
+  return fs.readFileSync(templatePath.fsPath, 'utf8')
     .replaceAll('${webview.cspSource}', webview.cspSource)
     .replaceAll('${nonce}', nonce)
     .replaceAll('${scriptUri}', scriptUri.toString())
-
-  if (mcpServerUrl) {
-    html = html.replace(
-      "// mcpServerUrl: 'http://localhost:9743',  // ← uncomment to enable MCP sync",
-      `mcpServerUrl: '${mcpServerUrl}',`
-    )
-  }
-
-  return html
+    .replaceAll('${mcpUrl}', mcpServerUrl ?? '')
+    .replaceAll('${schemaId}', schemaId ?? '')
 }
+```
+
+When `mcpServerUrl` is an empty string the webview's `initializeStructuraWebview` treats it as `undefined` and runs in standalone mode — no SSE connection is opened.
+
+---
+
+## Instance Isolation
+
+Each VS Code webview panel runs in its own browser context, so the Redux store, canvas adapter, and SSE connection are fully isolated — no state leaks between panels.
+
+When your extension opens **multiple** panels for different schemas simultaneously, pass a unique `schemaId` to each panel so the MCP server can target the correct schema:
+
+```ts
+// Extension Host side — provision a schema through the MCP server, then open a panel for it
+const schemaId = await mcpServer.createSchema({ name: 'My Schema' })
+openCanvasPanel(context, 'http://localhost:9743', schemaId)
+
+// canvas-panel.ts — propagate the schemaId through buildHtml
+export function openCanvasPanel(
+  context: vscode.ExtensionContext,
+  mcpServerUrl?: string,
+  schemaId?: string,
+) {
+  const panel = vscode.window.createWebviewPanel(...)
+  panel.webview.html = buildHtml(panel.webview, context.extensionUri, mcpServerUrl, schemaId)
+}
+```
+
+The MCP server keeps schema state keyed by `schema_id`.  All entity/link tool calls require an explicit `schema_id` parameter — see the [MCP README](../atomos-structura-mcp/README.md) for the full API.
+
+---
+
+## Single-bundle IIFE (recommended for VSIX packaging)
+
+By default the webview entry point is an ES module (`dist/webview/index.js`) which requires `<script type="module">`.  For VS Code extensions packaged as VSIX files — where the webview's script path must match a single `localResourceRoots` URI — a self-contained **IIFE** bundle is more reliable.
+
+Build the IIFE bundle:
+
+```bash
+# inside packages/atomos-structura
+pnpm run build:webview-iife
+# output → dist/webview/index.iife.js
+```
+
+Use it in your extension:
+
+```ts
+const scriptUri = webview.asWebviewUri(
+  vscode.Uri.joinPath(
+    extensionUri,
+    'node_modules', '@atomos-web', 'structura',
+    'dist', 'webview', 'index.iife.js'   // ← IIFE bundle, no dynamic imports
+  )
+)
+```
+
+The IIFE exposes `window.StructuraWebview`.  Replace the `<script type="module">` in `template.html` with a plain `<script>`:
+
+```html
+<script nonce="${nonce}" src="${scriptUri}"></script>
+<script nonce="${nonce}">
+  StructuraWebview.initializeStructuraWebview({
+    containerId: 'app',
+    mcpServerUrl: '${mcpUrl}',
+    schemaId: '${schemaId}',
+  }).catch(err => console.error('[Structura] init failed', err))
+</script>
 ```
 
 ---
