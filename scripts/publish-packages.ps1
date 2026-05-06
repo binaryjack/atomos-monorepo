@@ -47,7 +47,9 @@ function Write-Fail($msg) { Write-Host "    ERR $msg" -ForegroundColor Red }
 
 # ── 1. Auth check ──────────────────────────────────────────────────────────
 Write-Step "Checking npm authentication..."
+$ErrorActionPreference = 'Continue'
 $whoami = npm whoami 2>&1
+$ErrorActionPreference = 'Stop'
 if ($LASTEXITCODE -ne 0) {
   Write-Fail "Not logged in to npm. Run: npm login"
   exit 1
@@ -61,8 +63,10 @@ foreach ($pkg in $packages) {
   Write-Host "  Building $pkg..." -NoNewline
   Push-Location $pkgPath
   try {
+    $ErrorActionPreference = 'Continue'
     $out = pnpm run build 2>&1
     $buildExit = $LASTEXITCODE
+    $ErrorActionPreference = 'Stop'
   } catch {
     $buildExit = 1
     $out = $_.Exception.Message
@@ -90,12 +94,13 @@ foreach ($pkg in $packages) {
   Write-Host "  Publishing $pkgName@$pkgVer..." -NoNewline
   Push-Location $pkgPath
   try {
+    $ErrorActionPreference = 'Continue'
     if ($DryRun) {
-      $out = pnpm publish --dry-run --tag $Tag 2>&1
+      $out = pnpm publish --dry-run --tag $Tag --no-git-checks 2>&1
       Write-Host " (dry-run skipped)" -ForegroundColor Yellow
     } else {
       try {
-        $out = pnpm publish --tag $Tag 2>&1
+        $out = pnpm publish --tag $Tag --no-git-checks 2>&1
       } catch {
         $out = $_.Exception.Message
       }
@@ -107,9 +112,11 @@ foreach ($pkg in $packages) {
       } else {
         Write-Host " FAILED" -ForegroundColor Red
         Write-Host $out
+        $ErrorActionPreference = 'Stop'
         exit 1
       }
     }
+    $ErrorActionPreference = 'Stop'
   } finally {
     Pop-Location
   }

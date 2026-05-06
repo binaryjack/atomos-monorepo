@@ -27,14 +27,13 @@
     "test": "vitest",
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rimraf dist"
   },
   "dependencies": {
     "@atomos-web/prime": "workspace:*",
     "@atomos-web/prime-style": "workspace:*",
     "@atomos-web/structura-core": "workspace:*",
-    "@atomos-web/structura-mcp": "workspace:*",
-    "@binaryjack/formular.dev": "workspace:^"
+    "@atomos-web/structura-mcp": "workspace:*"
   },
   "devDependencies": {
     "glob": "^10.0.0",

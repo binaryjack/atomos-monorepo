@@ -25,7 +25,6 @@
     "clean": "powershell -Command \"Remove-Item -Force -Recurse dist -ErrorAction SilentlyContinue; exit 0\""
   },
   "dependencies": {
-    "@binaryjack/formular.dev": "workspace:*",
     "@atomos-web/structura-core": "workspace:*",
     "@atomos-web/prime-style": "workspace:*"
   },
