@@ -2,6 +2,17 @@
 
 **Visual schema designer for TypeScript projects** — Build, edit, and export data-model schemas headlessly via API or with a full interactive canvas UI.
 
+## ⚠️ Breaking Changes in v2.0.0
+
+- **`instanceId` is now REQUIRED**: To support multi-instance isolation and prevent state collisions between multiple canvases (e.g. in VS Code webviews), you must provide a unique `instanceId` when creating a canvas page or initializing a webview.
+
+```typescript
+// v2.0.0 pattern
+const page = createCanvasPage('my-unique-instance-id', config);
+```
+
+---
+
 ## ✨ New Features
 
 - 🎛️ **Fine-Grained Menu Control** — Runtime enable/disable of zoom, center, export, etc.

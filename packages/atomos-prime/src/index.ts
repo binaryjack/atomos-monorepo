@@ -6,6 +6,10 @@ export type { ToolboxConfiguration, ToolboxItem, Toolset } from './types/toolbox
 export { vbsElement, type VbsElementProps } from './base/vbs-element.js'
 export { createVbsCanvas, type VbsCanvasProps } from './components/vbs-canvas.js'
 
+// Tabs
+import './components/tabs/vbs-tab.js'
+import './components/tabs/vbs-tabs.js'
+
 // Atomic components
 export { createAccordion, type AccordionProps, type AccordionResult } from './features/accordion/create-accordion.js'
 export { createButton, type ButtonProps, type ButtonResult } from './features/button/create-button.js'
