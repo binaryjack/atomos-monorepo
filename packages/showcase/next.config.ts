@@ -4,7 +4,6 @@ const nextConfig: NextConfig = {
   output: 'export',
   basePath: '/atomos-monorepo',
   assetPrefix: '',
-  trailingSlash: true,
   experimental: {
   },
 };

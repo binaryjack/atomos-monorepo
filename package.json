@@ -17,7 +17,7 @@
     "lint": "pnpm -r lint",
     "type-check": "pnpm -r type-check",
     "clean": "pnpm -r clean",
-    "deploy:showcase-pages": "cd packages/showcase && pnpm build && cd ../.. && pnpm exec rimraf docs && move packages/showcase/out docs && echo > docs/.nojekyll"
+    "deploy:showcase-pages": "cd packages/showcase && pnpm build && cd ../.. && pnpm exec rimraf docs && move packages/showcase/out docs && echo > docs/.nojekyll && copy scripts\\deploy\\404.html docs\\404.html"
   },
   "devDependencies": {
     "@ai-agencee/cli": "^1.4.1",
