@@ -14,8 +14,6 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "paths": {
       "@binaryjack/formular.dev": ["../../packages/formular-dev/dist/formular-dev.mjs"],
       "@atomos-web/structura-core": ["../../packages/atomos-structura-core/dist/index.mjs"],
