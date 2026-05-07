@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'export',
-  basePath: '/docs',
-  assetPrefix: '/atomos-monorepo/docs',
+  basePath: '/atomos-monorepo',
+  assetPrefix: '',
+  trailingSlash: true,
   experimental: {
   },
 };
