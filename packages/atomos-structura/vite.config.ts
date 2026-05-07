@@ -1,20 +1,20 @@
-﻿import { defineConfig } from 'vite';
+﻿import { readFileSync, writeFileSync } from 'fs';
+import { glob } from 'glob';
+import { createRequire } from 'module';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
-import { readFileSync, writeFileSync } from 'fs';
-import { glob } from 'glob';
+import { defineConfig, PluginOption } from 'vite';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const pkg = createRequire(import.meta.url)('./package.json') as { version: string };
 
 // Strip UTF-8 BOM from output files for universal compatibility
-function stripBomPlugin() {
+function stripBomPlugin(): PluginOption {
   return {
     name: 'strip-bom',
     apply: 'build',
     writeBundle: async () => {
-      const files = await glob('dist/**/*.{js,cjs,mjs}', { nodir: true })
+      const files = await glob('./dist/**/*.{js,cjs,mjs}', { nodir: true })
       for (const file of files) {
         let content = readFileSync(file, 'utf8')
         if (content.charCodeAt(0) === 0xFEFF) {

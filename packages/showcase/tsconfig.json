@@ -9,18 +9,25 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@binaryjack/formular.dev": ["../../packages/formular-dev/dist/formular-dev.mjs"],
+      "@atomos-web/structura-core": ["../../packages/atomos-structura-core/dist/index.mjs"],
+      "@atomos-web/prime": ["../../packages/atomos-prime/dist/index.mjs"],
+      "@atomos-web/structura": ["../../packages/atomos-structura/dist/index.mjs"],
+      "@/*": ["./src/*"]
+    },
     "plugins": [
       {
         "name": "next"
       }
     ],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
   },
   "include": [
     "next-env.d.ts",

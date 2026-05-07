@@ -1,4 +1,7 @@
 packages:
   - 'packages/*'
 
+pnpm:
+  shamefully-hoist: true
+
 catalogs: {}

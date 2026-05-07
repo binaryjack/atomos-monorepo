@@ -1,3 +1,4 @@
+
 import type { IValidationOptions } from '@binaryjack/formular.dev';
 import type { ComponentType } from '../shared/component-type';
 import type { DataType } from '../shared/data-type';
