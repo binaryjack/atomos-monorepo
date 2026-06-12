@@ -119,6 +119,7 @@ export const createStructuraViewer = function(
         position: node.position,
         dimensions: node.dimensions,
         properties: node.properties as any[],
+        execution: (node as any).execution,
         workspace: null // Viewer doesn't need full workspace manager
       });
       registry.registerEntity(entity);
@@ -139,8 +140,10 @@ export const createStructuraViewer = function(
           } as DomainEntity;
         });
 
-        // Run Layout using TRUE dimensions
-        processAutoLayout(realNodes, clonedEdges);
+        // Run Layout using TRUE dimensions only if requested or if positions are not provided
+        if ((dag as any).config?.autoLayout !== false) {
+          processAutoLayout(realNodes, clonedEdges);
+        }
 
         // Apply calculated positions back to live entities
         realNodes.forEach(rn => {
@@ -198,36 +201,7 @@ export const createStructuraViewer = function(
 
         // Center and Fit to screen
         if (onLayoutReady && realNodes.length > 0) {
-          // Calculate Bounding Box
-          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-          realNodes.forEach(n => {
-            if (n.position.x < minX) minX = n.position.x;
-            if (n.position.y < minY) minY = n.position.y;
-            if (n.position.x + n.dimensions.width > maxX) maxX = n.position.x + n.dimensions.width;
-            if (n.position.y + n.dimensions.height > maxY) maxY = n.position.y + n.dimensions.height;
-          });
-
-          const schemaWidth = maxX - minX;
-          const schemaHeight = maxY - minY;
-          const PADDING = 60;
-          
-          const containerRect = svgContainer.getBoundingClientRect();
-          const viewportWidth = containerRect.width || window.innerWidth;
-          const viewportHeight = containerRect.height || window.innerHeight;
-
-          // Fit to screen (compute scale)
-          const scaleX = (viewportWidth - PADDING * 2) / Math.max(schemaWidth, 1);
-          const scaleY = (viewportHeight - PADDING * 2) / Math.max(schemaHeight, 1);
-          const targetScale = Math.min(scaleX, scaleY, 1); // Cap zoom at 1x
-
-          // Center to schema (compute translation)
-          const schemaCenterX = minX + schemaWidth / 2;
-          const schemaCenterY = minY + schemaHeight / 2;
-
-          const targetTx = (viewportWidth / 2) - (schemaCenterX * targetScale);
-          const targetTy = (viewportHeight / 2) - (schemaCenterY * targetScale);
-
-          onLayoutReady(targetTx, targetTy, targetScale);
+          fitToScreen();
         }
 
         // Reveal content
@@ -246,6 +220,58 @@ export const createStructuraViewer = function(
     if (updates.metadata) {
       if (entity.updateMetadata) entity.updateMetadata(updates.metadata);
     }
+    if (updates.execution && entity.executionSignal) {
+      entity.executionSignal.set({ ...entity.executionSignal.value, ...updates.execution });
+    }
+  };
+
+  const patchLink = (linkId: string, updates: any) => {
+    const link = linkManager.getLink(linkId);
+    if (!link) return;
+    
+    if (updates.execution && (link as any).setExecutionState) {
+      (link as any).setExecutionState(updates.execution);
+    }
+  };
+
+  const fitToScreen = () => {
+    const realNodes = Array.from(registry.workspaceState.value.entities.values()).map(e => ({
+      position: e.position.value,
+      dimensions: e.dimensions.value
+    }));
+    
+    if (!onLayoutReady || realNodes.length === 0) return;
+    
+    // Calculate Bounding Box
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    realNodes.forEach(n => {
+      if (n.position.x < minX) minX = n.position.x;
+      if (n.position.y < minY) minY = n.position.y;
+      if (n.position.x + n.dimensions.width > maxX) maxX = n.position.x + n.dimensions.width;
+      if (n.position.y + n.dimensions.height > maxY) maxY = n.position.y + n.dimensions.height;
+    });
+
+    const schemaWidth = maxX - minX;
+    const schemaHeight = maxY - minY;
+    const PADDING = 60;
+    
+    const containerRect = svgContainer.getBoundingClientRect();
+    const viewportWidth = containerRect.width || window.innerWidth;
+    const viewportHeight = containerRect.height || window.innerHeight;
+
+    // Fit to screen (compute scale)
+    const scaleX = (viewportWidth - PADDING * 2) / Math.max(schemaWidth, 1);
+    const scaleY = (viewportHeight - PADDING * 2) / Math.max(schemaHeight, 1);
+    const targetScale = Math.min(scaleX, scaleY, 1); // Cap zoom at 1x
+
+    // Center to schema (compute translation)
+    const schemaCenterX = minX + schemaWidth / 2;
+    const schemaCenterY = minY + schemaHeight / 2;
+
+    const targetTx = (viewportWidth / 2) - (schemaCenterX * targetScale);
+    const targetTy = (viewportHeight / 2) - (schemaCenterY * targetScale);
+
+    onLayoutReady(targetTx, targetTy, targetScale);
   };
 
   return {
@@ -253,6 +279,8 @@ export const createStructuraViewer = function(
     linkManager,
     loadSchema,
     patchEntity,
+    patchLink,
+    fitToScreen,
     cleanup: () => {
       linkManager.cleanup.destroy();
       registry.workspaceState.value.entities.forEach(e => e.cleanup());

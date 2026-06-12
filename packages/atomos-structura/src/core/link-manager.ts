@@ -1,4 +1,4 @@
-﻿import type { Signal } from '@atomos-web/prime'
+import type { Signal } from '@atomos-web/prime'
 import { createSignal } from '@atomos-web/prime'
 import type { RenderType } from '@atomos-web/structura-core'
 import type { EdgePosition } from '../features/edge/types/edge.types.js'
@@ -26,6 +26,7 @@ export interface LinkResult {
   readonly updatePath: (sourcePos: { x: number; y: number }, targetPos: { x: number; y: number }, srcEdge?: EdgePosition, dstEdge?: EdgePosition, renderType?: RenderType, srcRect?: { x: number; y: number; width: number; height: number }, dstRect?: { x: number; y: number; width: number; height: number }) => void;
   readonly setTemporary: (temporary: boolean) => void;
   readonly setValidity: (isValid: boolean) => void;
+  readonly setExecutionState?: (state: any) => void;
   readonly cleanup: {
     readonly destroy: () => void;
   };
@@ -77,6 +78,82 @@ export const createLinkManager = function(): LinkManager {
       if (props.animated) path.style.animation = 'vbs-dash 0.6s linear infinite';
     }
 
+    // Glow Filter Defs
+    if (!document.querySelector('#vbs-glow-filter')) {
+      const svgRoot = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgRoot.style.display = 'none';
+      svgRoot.innerHTML = `
+        <defs>
+          <filter id="vbs-glow-filter" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+      `;
+      document.head.appendChild(svgRoot);
+    }
+
+    // Execution Animation Container
+    let animCircle: SVGCircleElement | null = null;
+    let animMotion: SVGElement | null = null;
+
+    const setExecutionState = (state: any) => {
+      // Cleanup previous animations
+      if (animCircle && animCircle.parentNode) {
+        animCircle.parentNode.removeChild(animCircle);
+      }
+      animCircle = null;
+      animMotion = null;
+      path.style.animation = '';
+      path.removeAttribute('stroke-dasharray');
+      path.removeAttribute('filter');
+
+      if (!state || !state.active) return;
+
+      const type = state.animationType || 'flow';
+      const color = state.color || '#60a5fa';
+      const duration = state.duration || '2s';
+
+      if (type === 'dash') {
+        path.setAttribute('stroke-dasharray', '8,8');
+        path.setAttribute('stroke', color);
+        path.style.animation = `vbs-dash ${duration} linear infinite`;
+      } 
+      else if (type === 'pulse') {
+        path.setAttribute('stroke', color);
+        path.setAttribute('filter', 'url(#vbs-glow-filter)');
+        // basic pulse using CSS if needed, but glow is usually enough
+      }
+      else if (type === 'flow') {
+        path.setAttribute('stroke', color);
+        path.setAttribute('filter', 'url(#vbs-glow-filter)');
+        
+        // Flowing dot
+        animCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        animCircle.setAttribute('r', '5');
+        animCircle.setAttribute('fill', '#ffffff');
+        animCircle.setAttribute('filter', 'url(#vbs-glow-filter)');
+
+        animMotion = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
+        animMotion.setAttribute('dur', duration);
+        animMotion.setAttribute('repeatCount', 'indefinite');
+        
+        const mpath = document.createElementNS('http://www.w3.org/2000/svg', 'mpath');
+        mpath.setAttributeNS('http://www.w3.org/1999/xlink', 'href', `#link-${props.id}`);
+        
+        animMotion.appendChild(mpath);
+        animCircle.appendChild(animMotion);
+        
+        // We must append animCircle to the same parent as path
+        if (path.parentNode) {
+          path.parentNode.appendChild(animCircle);
+        }
+      }
+    };
+
     let currentRenderType = props.renderType;
 
     const updatePath = (
@@ -105,6 +182,10 @@ export const createLinkManager = function(): LinkManager {
       }
       
       path.setAttribute('d', d);
+      
+      if (animCircle && !animCircle.parentNode && path.parentNode) {
+        path.parentNode.appendChild(animCircle);
+      }
     };
 
     const setTemporary = (temporary: boolean) => {
@@ -152,9 +233,11 @@ export const createLinkManager = function(): LinkManager {
       updatePath,
       setTemporary,
       setValidity,
+      setExecutionState,
       cleanup: {
         destroy: () => {
           if (path.parentNode) path.parentNode.removeChild(path);
+          if (animCircle && animCircle.parentNode) animCircle.parentNode.removeChild(animCircle);
         }
       }
     };

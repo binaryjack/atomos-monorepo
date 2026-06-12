@@ -7,6 +7,7 @@ export class AtomosStructuraViewerElement extends HTMLElement {
   private contentRoot!: SVGGElement;
   private viewerEngine: ReturnType<typeof createStructuraViewer> | null = null;
   private _schema: DAGExport | null = null;
+  private resizeObserver: ResizeObserver | null = null;
 
   constructor() {
     super();
@@ -97,16 +98,27 @@ export class AtomosStructuraViewerElement extends HTMLElement {
     });
     this.shadowRoot!.getElementById('zoom-fit')!.addEventListener('click', () => {
       if (this.viewerEngine && this._schema) {
-        // Triggering loadSchema will re-run the layout and fit logic
-        this.viewerEngine.loadSchema(this._schema);
+        this.viewerEngine.fitToScreen();
       }
     });
 
     // Add basic pan/zoom for the viewer using pure DOM events
     this.setupBasicInteraction();
+    
+    // Auto fit-to-screen on container resize
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.viewerEngine && this._schema) {
+        this.viewerEngine.fitToScreen();
+      }
+    });
+    this.resizeObserver.observe(this);
   }
 
   disconnectedCallback() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
     if (this.viewerEngine) {
       this.viewerEngine.cleanup();
       this.viewerEngine = null;
@@ -131,6 +143,15 @@ export class AtomosStructuraViewerElement extends HTMLElement {
   patchEntity(entityId: string, updates: any) {
     if (this.viewerEngine) {
       this.viewerEngine.patchEntity(entityId, updates);
+    }
+  }
+
+  /**
+   * Patches an existing link directly (e.g. for flow animations).
+   */
+  patchLink(linkId: string, updates: any) {
+    if (this.viewerEngine) {
+      this.viewerEngine.patchLink(linkId, updates);
     }
   }
 

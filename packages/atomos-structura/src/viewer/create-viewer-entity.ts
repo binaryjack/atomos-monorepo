@@ -11,6 +11,7 @@ export interface ViewerEntityProps {
   position: { x: number; y: number };
   dimensions: { width: number; height: number };
   properties?: any[];
+  execution?: any;
   // Static context
   workspace: any; 
 }
@@ -22,6 +23,7 @@ export const createViewerEntity = function(props: ViewerEntityProps): EntityInst
 
   const positionSignal = createSignal(props.position);
   const dimensionsSignal = createSignal(props.dimensions);
+  const executionSignal = createSignal(props.execution || { status: 'idle' });
   
   // Dummy store for createEntityContent to read collapsed state etc
   const dummyStore = {
@@ -63,6 +65,7 @@ export const createViewerEntity = function(props: ViewerEntityProps): EntityInst
           }
         },
         isReadonly: true,
+        executionSignal: executionSignal,
       });
       contentElement = content.rootElement;
       updateSize = content.updateSize;
@@ -109,6 +112,7 @@ export const createViewerEntity = function(props: ViewerEntityProps): EntityInst
     element: root,
     position: positionSignal,
     dimensions: dimensionsSignal,
+    executionSignal: executionSignal,
     cleanup: () => { cleanups.forEach(fn => fn()); cleanups.length = 0; },
     notifyAnchorConnected: () => {},
     updateMetadata: (metadata: any) => {

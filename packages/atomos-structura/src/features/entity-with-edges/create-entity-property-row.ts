@@ -18,6 +18,7 @@ export interface EntityPropertyRowProps {
   readonly onSettingsClick: () => void;
   readonly onDeleteClick: () => void;
   readonly isReadonly?: boolean;
+  readonly required?: boolean;
 }
 
 const buildValueInput = function(
@@ -149,16 +150,26 @@ export const createEntityPropertyRow = function(
     nameSpan.style.cssText = 'flex:1;font-size:var(--vbs-entity-props-font-size, 12px);font-weight:600;color:var(--vbs-text-primary, #f4f4f5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--vbs-entity-props-font-family, system-ui, sans-serif);';
     nameSpan.textContent = props.label.value;
     
-    // Type Pill
+    // Type Pill container
     const typePill = document.createElement('span');
-    typePill.style.cssText = 'background:var(--vbs-bg-muted, #27272a);color:var(--vbs-text-secondary, #a1a1aa);padding:2px 6px;border-radius:4px;font-size:10px;text-transform:uppercase;font-weight:bold;letter-spacing:0.5px;';
-    typePill.textContent = props.dataType.value;
+    typePill.style.cssText = 'background:var(--vbs-bg-muted, #27272a);color:var(--vbs-text-secondary, #a1a1aa);padding:2px 6px;border-radius:4px;font-size:10px;text-transform:uppercase;font-weight:bold;letter-spacing:0.5px;display:flex;gap:4px;align-items:center;';
+    
+    const dtSpan = document.createElement('span');
+    dtSpan.textContent = props.dataType.value || 'string';
+    typePill.appendChild(dtSpan);
+    
+    if (props.required) {
+      const reqSpan = document.createElement('span');
+      reqSpan.textContent = '*';
+      reqSpan.style.cssText = 'color:var(--vbs-danger, #ef4444);font-size:12px;line-height:0;margin-top:4px;';
+      typePill.appendChild(reqSpan);
+    }
     
     row.appendChild(nameSpan);
     row.appendChild(typePill);
     
     const unsubLabel = props.label.subscribe(v => nameSpan.textContent = v);
-    const unsubType = props.dataType.subscribe(v => typePill.textContent = v);
+    const unsubType = props.dataType.subscribe(v => dtSpan.textContent = v || 'string');
     cleanups.push(unsubLabel, unsubType);
     
     return {

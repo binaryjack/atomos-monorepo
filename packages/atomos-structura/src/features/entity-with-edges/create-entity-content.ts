@@ -28,6 +28,7 @@ export interface EntityContentProps {
   /** Called whenever the required height changes so SVG geometry can update */
   readonly onHeightChange: (height: number) => void;
   readonly isReadonly?: boolean;
+  readonly executionSignal?: Signal<any>;
 }
 
 export interface EntityContentResult {
@@ -65,11 +66,40 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
     'width:100%', 'height:100%',
     'overflow:hidden',
     'background:transparent',
-    'border:none',
+    'border:1px solid transparent',
+    'border-radius:var(--vbs-radius, 6px)',
     'box-sizing:border-box',
+    'position:relative',
     'font-family:var(--vbs-entity-name-font-family, system-ui, sans-serif)',
     'color:var(--vbs-text-primary, #f4f4f5)',
+    'transition:box-shadow 0.3s ease, border-color 0.3s ease'
   ].join(';');
+
+  // Inject animation keyframes
+  const styleTag = document.createElement('style');
+  styleTag.textContent = `
+    @keyframes vbs-exec-glow {
+      0% { box-shadow: 0 0 4px 0px #3b82f6, inset 0 0 4px 0px #3b82f6; border-color: #3b82f6; }
+      50% { box-shadow: 0 0 15px 4px #60a5fa, inset 0 0 8px 2px #60a5fa; border-color: #93c5fd; }
+      100% { box-shadow: 0 0 4px 0px #3b82f6, inset 0 0 4px 0px #3b82f6; border-color: #3b82f6; }
+    }
+    .vbs-exec-running {
+      animation: vbs-exec-glow 2s infinite ease-in-out;
+    }
+    .vbs-exec-success {
+      border-color: #22c55e !important;
+      box-shadow: 0 0 10px 0px rgba(34, 197, 94, 0.4) !important;
+    }
+    .vbs-exec-failed {
+      border-color: #ef4444 !important;
+      box-shadow: 0 0 10px 0px rgba(239, 68, 68, 0.4) !important;
+    }
+    .vbs-exec-warning {
+      border-color: #eab308 !important;
+      box-shadow: 0 0 10px 0px rgba(234, 179, 8, 0.4) !important;
+    }
+  `;
+  body.appendChild(styleTag);
 
   fo.appendChild(body);
 
@@ -95,7 +125,64 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
     onDeleteClick:   () => props.onDelete(store.signal.value.id),
   });
   cleanups.push(header.cleanup.destroy);
+  header.element.style.position = 'relative';
   body.appendChild(header.element);
+
+  // Execution Progress Bar
+  const progressBar = document.createElement('div');
+  progressBar.style.cssText = 'position:absolute;bottom:0;left:0;height:2px;background:#3b82f6;width:0%;transition:width 0.3s linear;opacity:0;';
+  header.element.appendChild(progressBar);
+
+  // Floating Status Badge
+  const statusBadge = document.createElement('div');
+  statusBadge.style.cssText = 'position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;color:white;opacity:0;transition:opacity 0.2s, transform 0.2s;transform:scale(0.8);box-shadow:0 2px 4px rgba(0,0,0,0.3);z-index:10;';
+  
+  // We append statusBadge to `body` so it can break out of the header bounds, 
+  // but wait `overflow:hidden` is on `body`. We should put it on `fo`? No, foreignObject doesn't support overflow visible easily in all browsers. 
+  // We will append it to `body` and remove `overflow:hidden` from `body` if possible, or just place it inside.
+  body.style.overflow = 'visible'; 
+  body.appendChild(statusBadge);
+
+  if (props.executionSignal) {
+    const unsubExec = props.executionSignal.subscribe((exec) => {
+      // 1. Frame glow
+      body.className = '';
+      if (exec.status === 'running') body.classList.add('vbs-exec-running');
+      if (exec.status === 'success') body.classList.add('vbs-exec-success');
+      if (exec.status === 'failed') body.classList.add('vbs-exec-failed');
+      if (exec.status === 'warning') body.classList.add('vbs-exec-warning');
+
+      // 2. Progress Bar
+      if (exec.progress !== undefined) {
+        progressBar.style.width = `${Math.max(0, Math.min(100, exec.progress))}%`;
+        progressBar.style.opacity = '1';
+      } else {
+        progressBar.style.opacity = '0';
+      }
+
+      // 3. Status Badge
+      if (exec.status === 'success') {
+        statusBadge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width:12px;height:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>';
+        statusBadge.style.background = '#22c55e';
+        statusBadge.style.opacity = '1';
+        statusBadge.style.transform = 'scale(1)';
+      } else if (exec.status === 'failed') {
+        statusBadge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width:12px;height:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>';
+        statusBadge.style.background = '#ef4444';
+        statusBadge.style.opacity = '1';
+        statusBadge.style.transform = 'scale(1)';
+      } else if (exec.status === 'warning') {
+        statusBadge.innerHTML = '<span style="font-weight:bold;line-height:0">!</span>';
+        statusBadge.style.background = '#eab308';
+        statusBadge.style.opacity = '1';
+        statusBadge.style.transform = 'scale(1)';
+      } else {
+        statusBadge.style.opacity = '0';
+        statusBadge.style.transform = 'scale(0.8)';
+      }
+    });
+    cleanups.push(unsubExec);
+  }
 
   // ─── scrollable body ──────────────────────────────────────────────────────
   const scrollBody = document.createElement('div');
@@ -163,6 +250,7 @@ export const createEntityContent = function(props: EntityContentProps): EntityCo
           componentType: propComponentTypeSignal,
           value: propValueSignal,
           isReadonly: !!props.isReadonly,
+          required: !!prop.validation?.required,
           availableDataTypes: props.globalConfig.value.dataTypes,
           onLabelChange: (v) => {
             propLabelSignal.set(v);

@@ -1,4 +1,4 @@
-﻿# @atomos-web/structura
+# @atomos-web/structura
 
 **Visual schema designer for TypeScript projects** — Build, edit, and export data-model schemas headlessly via API or with a full interactive canvas UI.
 
@@ -90,6 +90,29 @@ builder.api.setViewport({ zoom: 1.5, pan: { x: 100, y: 50 } });
 // Smart auto-layout
 builder.api.centerOnScreen({ width: 1200, height: 800 });
 builder.api.fitToScreen({ width: 1200, height: 800, padding: 100 });
+```
+
+### Real-time Execution Telemetry
+The Lightweight Viewer Engine exposes native patch methods to support real-time state machine execution and workflow orchestration animations. These bypass the Redux store entirely and write directly to DOM signals for 60fps performance.
+
+```typescript
+// Render an animated glowing border, a progress bar, and a running status badge
+viewer.patchEntity('user', { 
+  execution: { 
+    status: 'running', // 'idle' | 'running' | 'success' | 'warning' | 'failed'
+    progress: 45 // 0-100
+  } 
+});
+
+// Animate a relationship line with a glowing traveling dot and pulsing dash stroke
+viewer.patchLink('link-1', { 
+  execution: { 
+    active: true, 
+    animationType: 'flow', // 'flow' | 'pulse' | 'dash'
+    color: '#22c55e', 
+    duration: '1.5s' 
+  } 
+});
 ```
 
 ### Menu Control System

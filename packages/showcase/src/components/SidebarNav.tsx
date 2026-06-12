@@ -16,7 +16,7 @@ export default function SidebarNav() {
     const active = isActive(path);
     const baseClasses = "px-3 py-1.5 text-sm rounded transition-all flex items-center gap-2 border-l-2";
     
-    if (path === "/" || path === "/usage" || path === "/customization" || path === "/examples") {
+    if (path === "/" || path === "/usage" || path === "/customization" || path === "/examples" || path === "/examples/execution") {
       return `${baseClasses} py-2 ${
         active 
           ? "bg-white/5 text-blue-300 border-blue-500 shadow-sm" 
@@ -52,6 +52,9 @@ export default function SidebarNav() {
         </Link>
         <Link href="/examples" className={getLinkClasses("/examples")}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Examples
+        </Link>
+        <Link href="/examples/execution" className={getLinkClasses("/examples/execution", "green-400")}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Execution Telemetry
         </Link>
         
         <div className="text-[10px] uppercase font-bold text-slate-500/80 mt-6 mb-2 tracking-[0.2em] pl-3">Architecture Samples</div>

@@ -8,4 +8,5 @@ export interface EntityInstance {
   readonly cleanup: () => void;
   readonly notifyAnchorConnected?: (anchorId: string, linkId: string) => void;
   readonly updateMetadata?: (metadata: { shape?: string, color?: string, description?: string }) => void;
+  readonly executionSignal?: Signal<any>;
 }
