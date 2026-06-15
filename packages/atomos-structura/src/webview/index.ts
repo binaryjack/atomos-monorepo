@@ -33,6 +33,8 @@ export interface WebviewInitConfig {
    * use `.replaceAll('${schemaId}', actualId)` to inject the value.
    */
   schemaId?: string
+  /** Optional callback whenever the internal Redux state changes */
+  onStateChange?: (state: any) => void
 }
 
 export interface WebviewApp {
@@ -40,6 +42,8 @@ export interface WebviewApp {
   readonly element: HTMLElement
   /** Disconnect MCP and destroy the canvas. Call in extension deactivation. */
   readonly disconnect: () => Promise<void>
+  /** Get current raw Redux state of the webview */
+  readonly getState: () => any
 }
 
 const generateInstanceId = (): string => {
@@ -103,7 +107,7 @@ export const initializeStructuraWebview = async (config: WebviewInitConfig): Pro
   // and the MCP SSE connection internally — passing mcpServerUrl routes all
   // through a single code path and prevents a double SSE connection.
   // Pass instanceId to ensure per-instance localStorage isolation.
-  const page = createCanvasPage(instanceId, config?.workspaceConfig, resolvedMcpUrl)
+  const page = createCanvasPage(instanceId, config?.workspaceConfig, resolvedMcpUrl, config?.onStateChange)
 
   // If a specific schema ID was provided (e.g. pre-provisioned by Extension Host),
   // activate it once the store is ready.
@@ -122,5 +126,6 @@ export const initializeStructuraWebview = async (config: WebviewInitConfig): Pro
     disconnect: async () => {
       page.cleanup.destroy()
     },
+    getState: () => page.getState(),
   }
 }

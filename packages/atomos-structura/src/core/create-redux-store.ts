@@ -1,4 +1,4 @@
-﻿import type { Cardinality, LinkProps, RenderType, WorkspaceConfig } from '@atomos-web/structura-core'
+import type { Cardinality, LinkProps, RenderType, WorkspaceConfig } from '@atomos-web/structura-core'
 import type { CanvasModel, ReduxAction, ReduxState, ReduxStore, SchemaModel } from '../types/redux-state.types.js'
 
 const DEFAULT_CANVAS_ID = 'canvas-default';
@@ -350,6 +350,7 @@ export const create_redux_store = function(options: { instanceId: string; config
   const reduxStateKey = `${instanceId ? `${instanceId}:` : ''}vbe2:redux-state`;
 
   const persist = function(): void {
+    if (current_state.workspace?.config?.disableLocalStorage) return;
     const serialized = JSON.stringify(current_state);
     try {
       localStorage.setItem(reduxStateKey, serialized);
@@ -368,6 +369,10 @@ export const create_redux_store = function(options: { instanceId: string; config
   };
 
   const load = function(): void {
+    if (config?.disableLocalStorage) {
+      current_state = make_initial_state(config);
+      return;
+    }
     try {
       const raw = localStorage.getItem(reduxStateKey);
       if (raw) {

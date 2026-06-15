@@ -461,6 +461,29 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
   );
   moreMenu.appendChild(aboutBtn);
 
+  // -- Custom Actions --
+  const workspaceConfig = store.get_state().workspace.config;
+  const customActions = workspaceConfig?.menu?.customActions || [];
+  if (customActions.length > 0) {
+    moreMenu.appendChild(hDivider());
+    customActions.forEach(action => {
+      const iconSvg = action.icon === 'zap' || action.icon === 'send' 
+        ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`
+        : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
+        
+      const actionBtn = createIconButton(
+        iconSvg,
+        action.label,
+        () => { 
+          menuOpen = false; 
+          closeMenu();
+          window.dispatchEvent(new CustomEvent('structura-custom-action', { detail: { actionId: action.id } }));
+        }
+      );
+      moreMenu.appendChild(actionBtn);
+    });
+  }
+
   topBurger.appendChild(burgerBtn);
   topBurger.appendChild(moreMenu);
 
@@ -503,6 +526,8 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
     save_workspace: saveWorkspaceBtn,
     load_workspace: loadWorkspaceBtn,
     export_svg: [exportSvgBtn, exportPngBtn],
+    settings: settingsBtn,
+    about: aboutBtn,
   };
 
   const apply_menu_config = (cfg: WorkspaceMenuConfig): void => {

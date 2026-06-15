@@ -10,6 +10,8 @@ export interface WorkspaceConfig {
    * createSchema / MCP create-schema are rejected once one schema exists.
    */
   readonly allow_multiple_schemas?: boolean;
+  /** Disable local storage persistence for schemas, pushing responsibility to Redux/parent session. */
+  readonly disableLocalStorage?: boolean;
   /** Fine-grained availability and value config for every canvas toolbar item. */
   readonly menu?: WorkspaceMenuConfig;
   /**

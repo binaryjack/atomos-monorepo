@@ -35,7 +35,7 @@ registerExportPlugin(typescriptPlugin);
 registerExportPlugin(jsonSchemaPlugin);
 registerExportPlugin(mermaidPlugin);
 
-export const createCanvasPage = function(instanceId: string, config?: WorkspaceConfig, mcpServerUrl?: string) {
+export const createCanvasPage = function(instanceId: string, config?: WorkspaceConfig, mcpServerUrl?: string, onStateChange?: (state: any) => void) {
   // BREAKING v2.0.0: instanceId is REQUIRED
   if (!instanceId || instanceId.trim().length === 0) {
     throw new Error(
@@ -51,11 +51,17 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
   // Seed the per-instance store with the runtime config before any subsystem uses it
   const store = createInstanceReduxStore(config, instanceId)
   
+  const cleanups: Array<() => void> = [];
+
+  if (onStateChange) {
+    cleanups.push(store.subscribe(() => {
+      onStateChange(store.get_state());
+    }));
+  }
+
   // Inject design system CSS variables
   injectDesignSystemTokens();
   
-  const cleanups: Array<() => void> = [];
-
   // Root — fills full viewport
   const root = document.createElement('div');
   root.style.cssText = 'position:fixed;inset:0;overflow:hidden;background:var(--vbs-bg-input, #09090b);';
@@ -772,6 +778,7 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
         cleanups.forEach(fn => fn());
         cleanups.length = 0;
       }
-    }
+    },
+    getState: () => store.get_state()
   };
 };
