@@ -1,4 +1,4 @@
-﻿import type { Entity, LinkProps, WorkspaceConfig, WorkspaceMenuConfig } from '@atomos-web/structura-core';
+import type { Entity, LinkProps, WorkspaceConfig, WorkspaceMenuConfig } from '@atomos-web/structura-core';
 import chokidar, { type FSWatcher } from 'chokidar';
 import dagre from 'dagre';
 import fs from 'fs';
@@ -292,6 +292,8 @@ const process_request = (srv: VbsMcpServerInstance, req: McpRequest): McpRespons
     case 'atomos-structura/viewport/fit-to-screen': return handle_viewport_fit(srv, req);
     case 'atomos-structura/session/close':        return handle_session_close(srv, req);
     case 'atomos-structura/session/clear-memory': return handle_session_clear_memory(srv, req);
+    case 'tools/list': return handle_tools_list(srv, req);
+    case 'tools/call': return handle_tools_call(srv, req);
     default: return { error: { code: -32601, message: 'Method not found' }, id: req.id };
   }
 };
@@ -911,6 +913,101 @@ const handle_session_clear_memory = (srv: VbsMcpServerInstance, req: McpRequest)
     : make_initial_state();
   emit_sse(srv._clients, 'state-reset', { success: true });
   return { result: { success: true }, id: req.id };
+};
+
+// Standard MCP Tools handlers
+
+const handle_tools_list = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
+  return {
+    id: req.id,
+    result: {
+      tools: [
+        {
+          name: "structura_get_schema",
+          description: "Retrieve the current state of a schema on the Erathos canvas.",
+          inputSchema: {
+            type: "object",
+            properties: { schema_id: { type: "string" } },
+            required: ["schema_id"]
+          }
+        },
+        {
+          name: "structura_create_entity",
+          description: "Add a new node/entity to the Erathos canvas.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              schema_id: { type: "string" },
+              id: { type: "string" },
+              type: { type: "string" },
+              position: { 
+                type: "object",
+                properties: { x: { type: "number" }, y: { type: "number" } },
+                required: ["x", "y"]
+              },
+              props: { type: "object" }
+            },
+            required: ["schema_id", "id", "type", "position", "props"]
+          }
+        },
+        {
+          name: "structura_update_entity",
+          description: "Update an existing node/entity on the Erathos canvas.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              schema_id: { type: "string" },
+              id: { type: "string" },
+              props: { type: "object" },
+              position: { 
+                type: "object",
+                properties: { x: { type: "number" }, y: { type: "number" } },
+                required: ["x", "y"]
+              }
+            },
+            required: ["schema_id", "id"]
+          }
+        },
+        {
+          name: "structura_create_link",
+          description: "Create a connection/link between two entities on the canvas.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              schema_id: { type: "string" },
+              id: { type: "string" },
+              source: { type: "string" },
+              target: { type: "string" },
+              type: { type: "string" },
+              props: { type: "object" }
+            },
+            required: ["schema_id", "id", "source", "target"]
+          }
+        }
+      ]
+    }
+  };
+};
+
+const handle_tools_call = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
+  const { name, arguments: args } = (req.params ?? {}) as any;
+  
+  try {
+    switch (name) {
+      case 'structura_get_schema':
+        return handle_get_schema(srv, { id: req.id, method: 'atomos-structura/get-schema', params: args });
+      case 'structura_create_entity':
+        return handle_create_entity(srv, { id: req.id, method: 'atomos-structura/create-entity', params: args });
+      case 'structura_update_entity':
+        return handle_update_entity(srv, { id: req.id, method: 'atomos-structura/update-entity', params: args });
+      case 'structura_create_link':
+        return handle_create_link(srv, { id: req.id, method: 'atomos-structura/create-link', params: args });
+      default:
+        return { error: { code: -32601, message: `Tool ${name} not found` }, id: req.id };
+    }
+  } catch (error) {
+    return { error: { code: 500, message: error instanceof Error ? error.message : 'Internal error during tool call' }, id: req.id };
+  }
 };
 
 /** Factory wrapper for VbsMcpServer (avoids `new` construct signature issues with prototype pattern). */

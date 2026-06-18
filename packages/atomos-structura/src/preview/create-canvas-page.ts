@@ -779,6 +779,24 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
         cleanups.length = 0;
       }
     },
-    getState: () => store.get_state()
+    getState: () => store.get_state(),
+    testApi: {
+      createEntity: getEntityManager(instanceId).createEntity,
+      moveEntity: getEntityManager(instanceId).moveEntity,
+      resizeEntity: getEntityManager(instanceId).resizeEntity,
+      updateEntityProperties: getEntityManager(instanceId).updateEntityProperties,
+      updateEntityName: getEntityManager(instanceId).updateEntityName,
+      updateEntityCollapse: getEntityManager(instanceId).updateEntityCollapse,
+      updateEntityMetadata: getEntityManager(instanceId).updateEntityMetadata,
+      removeEntity: getEntityManager(instanceId).removeEntity,
+      getEntity: getEntityManager(instanceId).getEntity,
+      getAllEntities: getEntityManager(instanceId).getAllEntities,
+      createLink: getEntityManager(instanceId).createLink,
+      updateLinkProperties: getEntityManager(instanceId).updateLinkProperties,
+      updateLinkEndpoints: getEntityManager(instanceId).updateLinkEndpoints,
+      removeLink: getEntityManager(instanceId).removeLink,
+      getLink: getEntityManager(instanceId).getLink,
+      getAllLinks: getEntityManager(instanceId).getAllLinks,
+    }
   };
 };

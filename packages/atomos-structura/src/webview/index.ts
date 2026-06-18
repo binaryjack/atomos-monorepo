@@ -44,6 +44,11 @@ export interface WebviewApp {
   readonly disconnect: () => Promise<void>
   /** Get current raw Redux state of the webview */
   readonly getState: () => any
+  /** 
+   * API exposed for testing tools (e.g. Playwright) to bypass DOM simulation 
+   * and programmatically interact with the canvas engine. 
+   */
+  readonly testApi?: Record<string, any>
 }
 
 const generateInstanceId = (): string => {
@@ -127,5 +132,6 @@ export const initializeStructuraWebview = async (config: WebviewInitConfig): Pro
       page.cleanup.destroy()
     },
     getState: () => page.getState(),
+    testApi: page.testApi,
   }
 }
