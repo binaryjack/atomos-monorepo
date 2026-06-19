@@ -93,7 +93,7 @@ export const createLinkManager = function(): LinkManager {
               <feMergeNode in="SourceGraphic"/>
             </feMerge>
           </filter>
-          <marker id="vbs-arrow-left" viewBox="0 -5 10 10" refX="0" refY="0" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <marker id="vbs-arrow-left" viewBox="0 -5 10 10" refX="0" refY="0" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M 10,-5 L 0,0 L 10,5 z" fill="context-stroke"></path>
           </marker>
           <marker id="vbs-arrow-right" viewBox="0 -5 10 10" refX="10" refY="0" markerWidth="6" markerHeight="6" orient="auto">
