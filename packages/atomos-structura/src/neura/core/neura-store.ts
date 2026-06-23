@@ -1,4 +1,4 @@
-import { createSignal, createGlobalStore } from 'atomos-prime';
+import { createSignal } from '@atomos-web/prime';
 
 export interface NeuraNode {
   id: string;
@@ -33,37 +33,36 @@ export interface NeuraState {
 }
 
 export function createNeuraStore() {
-  const store = createGlobalStore<NeuraState>({
+  const store = createSignal<NeuraState>({
     nodes: {},
     edges: {},
     viewport: { x: 0, y: 0, zoom: 1, width: 800, height: 600 }
   });
 
   const setViewport = (viewport: Partial<NeuraViewport>) => {
-    store.set(state => ({
+    const state = store.value;
+    store.set({
       ...state,
       viewport: { ...state.viewport, ...viewport }
-    }));
+    });
   };
 
   const addNodes = (nodes: NeuraNode[]) => {
-    store.set(state => {
-      const newNodes = { ...state.nodes };
-      for (const node of nodes) {
-        newNodes[node.id] = node;
-      }
-      return { ...state, nodes: newNodes };
-    });
+    const state = store.value;
+    const newNodes = { ...state.nodes };
+    for (const node of nodes) {
+      newNodes[node.id] = node;
+    }
+    store.set({ ...state, nodes: newNodes });
   };
 
   const addEdges = (edges: NeuraEdge[]) => {
-    store.set(state => {
-      const newEdges = { ...state.edges };
-      for (const edge of edges) {
-        newEdges[edge.id] = edge;
-      }
-      return { ...state, edges: newEdges };
-    });
+    const state = store.value;
+    const newEdges = { ...state.edges };
+    for (const edge of edges) {
+      newEdges[edge.id] = edge;
+    }
+    store.set({ ...state, edges: newEdges });
   };
 
   return {

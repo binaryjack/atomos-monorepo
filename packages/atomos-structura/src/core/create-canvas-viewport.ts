@@ -1,4 +1,4 @@
-﻿import type { Signal } from '@atomos-web/prime'
+import type { Signal } from '@atomos-web/prime'
 import { createSignal } from '@atomos-web/prime'
 
 export const CANVAS_SIZE = 4000;
@@ -86,9 +86,9 @@ export const createCanvasViewport = function(
     const { zoom } = state.value;
     let safeX = Number.isFinite(x) ? x : 0;
     let safeY = Number.isFinite(y) ? y : 0;
-    // Prevent flying off into space
-    if (safeX < -20000 || safeX > 20000) safeX = 0;
-    if (safeY < -20000 || safeY > 20000) safeY = 0;
+    // Prevent flying off into space, but clamp instead of resetting to 0
+    safeX = Math.max(-500000, Math.min(500000, safeX));
+    safeY = Math.max(-500000, Math.min(500000, safeY));
     
     updateState({
       zoom,
@@ -109,8 +109,8 @@ export const createCanvasViewport = function(
     let newPanX = originX - scale * (originX - currentPan.x);
     let newPanY = originY - scale * (originY - currentPan.y);
 
-    if (!Number.isFinite(newPanX) || newPanX < -20000 || newPanX > 20000) newPanX = 0;
-    if (!Number.isFinite(newPanY) || newPanY < -20000 || newPanY > 20000) newPanY = 0;
+    newPanX = Math.max(-500000, Math.min(500000, newPanX));
+    newPanY = Math.max(-500000, Math.min(500000, newPanY));
 
     updateState({
       pan: { x: newPanX, y: newPanY },
@@ -184,8 +184,8 @@ export const createCanvasViewport = function(
     
     console.log(`[VIEWPORT-LOG] onMouseMove (drag) dx:${dx} dy:${dy} | result newX:${newX} newY:${newY}`);
     
-    if (newX < -20000 || newX > 20000) newX = panOrigin.x;
-    if (newY < -20000 || newY > 20000) newY = panOrigin.y;
+    newX = Math.max(-500000, Math.min(500000, newX));
+    newY = Math.max(-500000, Math.min(500000, newY));
     
     updateState({ pan: { x: newX, y: newY }, zoom });
   };

@@ -23,16 +23,18 @@ const calculateAppartenanceCenters = () => {
     if (!centers[node.appartenanceId]) {
       centers[node.appartenanceId] = { sumX: 0, sumY: 0, count: 0 };
     }
-    centers[node.appartenanceId].sumX += node.x;
-    centers[node.appartenanceId].sumY += node.y;
-    centers[node.appartenanceId].count += 1;
+    const center = centers[node.appartenanceId]!;
+    center.sumX += node.x;
+    center.sumY += node.y;
+    center.count += 1;
   }
   
   const result: Record<string, { x: number; y: number }> = {};
   for (const key in centers) {
+    const center = centers[key]!;
     result[key] = {
-      x: centers[key].sumX / centers[key].count,
-      y: centers[key].sumY / centers[key].count
+      x: center.sumX / center.count,
+      y: center.sumY / center.count
     };
   }
   return result;

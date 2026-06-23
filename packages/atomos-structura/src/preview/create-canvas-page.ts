@@ -223,8 +223,9 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
       btn.onclick = (e) => {
         e.stopPropagation();
         const v = viewport.state.value;
-        const screenW = window.innerWidth;
-        const screenH = window.innerHeight;
+        const rect = canvasWrap.getBoundingClientRect();
+        const screenW = rect.width;
+        const screenH = rect.height;
         // Fix: Use Math.max and Number.isFinite to ensure valid coordinates
         const safePanX = Number.isFinite(v.pan.x) ? v.pan.x : 0;
         const safePanY = Number.isFinite(v.pan.y) ? v.pan.y : 0;
@@ -287,8 +288,9 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
         btn.onclick = (e) => {
           e.stopPropagation();
           const v = viewport.state.value;
-          const screenW = window.innerWidth;
-          const screenH = window.innerHeight;
+          const rect = canvasWrap.getBoundingClientRect();
+          const screenW = rect.width;
+          const screenH = rect.height;
           // Fix: Use Math.max and Number.isFinite to ensure valid coordinates
           const safePanX = Number.isFinite(v.pan.x) ? v.pan.x : 0;
           const safePanY = Number.isFinite(v.pan.y) ? v.pan.y : 0;

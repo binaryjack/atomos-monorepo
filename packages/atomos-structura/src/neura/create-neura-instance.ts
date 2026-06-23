@@ -1,4 +1,5 @@
 import { createNeuraStore } from './core/neura-store';
+import type { NeuraState } from './core/neura-store';
 import { WebGLEngine } from './renderer/webgl-engine';
 import { CullingSystem } from './renderer/culling-system';
 
@@ -14,15 +15,14 @@ export function createNeuraInstance(canvas: HTMLCanvasElement, workerUrl: string
     if (e.data.type === 'TICK_RESULT') {
       const positions = e.data.payload as { id: string, x: number, y: number }[];
       // Update store positions
-      store.set(state => {
-        const nextNodes = { ...state.nodes };
-        for (const pos of positions) {
-          if (nextNodes[pos.id]) {
-            nextNodes[pos.id] = { ...nextNodes[pos.id], x: pos.x, y: pos.y };
-          }
+      const state = store.value;
+      const nextNodes = { ...state.nodes };
+      for (const pos of positions) {
+        if (nextNodes[pos.id]) {
+          nextNodes[pos.id] = { ...nextNodes[pos.id]!, x: pos.x, y: pos.y };
         }
-        return { ...state, nodes: nextNodes };
-      });
+      }
+      store.set({ ...state, nodes: nextNodes });
     }
   };
 
@@ -54,7 +54,7 @@ export function createNeuraInstance(canvas: HTMLCanvasElement, workerUrl: string
     lastX = e.clientX;
     lastY = e.clientY;
     
-    const state = store.get();
+    const state = store.value;
     setViewport({ 
       x: state.viewport.x + dx / state.viewport.zoom, 
       y: state.viewport.y + dy / state.viewport.zoom 
@@ -63,14 +63,14 @@ export function createNeuraInstance(canvas: HTMLCanvasElement, workerUrl: string
 
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
-    const state = store.get();
+    const state = store.value;
     const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
     setViewport({ zoom: state.viewport.zoom * zoomDelta });
   });
 
   // Render loop
   webgl.startLoop(() => {
-    const state = store.get();
+    const state = store.value;
     
     // 1. Cull off-screen items
     const { visibleNodes, visibleEdges } = culling.cull(state.nodes, state.edges, state.viewport);

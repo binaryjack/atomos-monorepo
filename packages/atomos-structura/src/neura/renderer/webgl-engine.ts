@@ -1,4 +1,4 @@
-import { NeuraNode, NeuraEdge, NeuraViewport } from '../core/neura-store';
+import type { NeuraNode, NeuraEdge, NeuraViewport } from '../core/neura-store';
 
 const nodeVertexShaderSource = `
   attribute vec2 a_position;
@@ -137,7 +137,7 @@ export class WebGLEngine {
     const colors = new Float32Array(nodes.length * 3);
     
     // Simple color hashing based on appartenanceId for demo
-    const getColor = (id: string) => {
+    const getColor = (id: string): [number, number, number] => {
       const hash = id.split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a }, 0);
       const r = ((hash >> 16) & 0xFF) / 255;
       const g = ((hash >> 8) & 0xFF) / 255;
@@ -146,10 +146,11 @@ export class WebGLEngine {
     };
 
     for (let i = 0; i < nodes.length; i++) {
-      positions[i * 2] = nodes[i].x;
-      positions[i * 2 + 1] = nodes[i].y;
+      const node = nodes[i]!;
+      positions[i * 2] = node.x;
+      positions[i * 2 + 1] = node.y;
       
-      const [r, g, b] = getColor(nodes[i].appartenanceId);
+      const [r, g, b] = getColor(node.appartenanceId);
       colors[i * 3] = r;
       colors[i * 3 + 1] = g;
       colors[i * 3 + 2] = b;

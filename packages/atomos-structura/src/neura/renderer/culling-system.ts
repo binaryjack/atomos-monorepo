@@ -1,4 +1,4 @@
-import { NeuraNode, NeuraEdge, NeuraViewport } from '../core/neura-store';
+import type { NeuraNode, NeuraEdge, NeuraViewport } from '../core/neura-store';
 
 /**
  * Spatial Index and Culling System
@@ -30,7 +30,7 @@ export class CullingSystem {
 
     // 1. Cull Nodes (and determine semantic zoom level)
     for (const key in nodes) {
-      const node = nodes[key];
+      const node = nodes[key]!;
       // Basic bounding box check
       if (node.x >= minX && node.x <= maxX && node.y >= minY && node.y <= maxY) {
         // TODO: Semantic zoom logic based on viewport.zoom
@@ -44,7 +44,7 @@ export class CullingSystem {
     // 2. Cull Edges (only render if both source and target are visible, or at least one is)
     const visibleEdges: NeuraEdge[] = [];
     for (const key in edges) {
-      const edge = edges[key];
+      const edge = edges[key]!;
       if (visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId)) {
         visibleEdges.push(edge);
       }
