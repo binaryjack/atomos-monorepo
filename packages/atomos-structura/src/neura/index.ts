@@ -1,7 +1,7 @@
-export * from './core/neura-store';
-export * from './renderer/webgl-engine';
-export * from './renderer/culling-system';
-export * from './create-neura-instance';
+export * from './core/neura-store.js';
+export * from './renderer/webgl-engine.js';
+export * from './renderer/culling-system.js';
+export * from './create-neura-instance.js';
 
 // Worker would typically be instantiated differently depending on the bundler (Vite, Webpack),
 // but we export the path or a factory function here for convenience.

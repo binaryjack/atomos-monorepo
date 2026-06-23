@@ -1,4 +1,4 @@
-import type { NeuraNode, NeuraEdge, NeuraViewport } from '../core/neura-store';
+import type { NeuraNode, NeuraEdge, NeuraViewport } from '../core/neura-store.js';
 
 /**
  * Spatial Index and Culling System
@@ -20,10 +20,17 @@ export class CullingSystem {
     viewport: NeuraViewport
   ): { visibleNodes: NeuraNode[], visibleEdges: NeuraEdge[] } {
     
-    const minX = viewport.x - this.overflowPadding;
-    const maxX = viewport.x + viewport.width + this.overflowPadding;
-    const minY = viewport.y - this.overflowPadding;
-    const maxY = viewport.y + viewport.height + this.overflowPadding;
+    // Calculate padding dynamically based on zoom (more padding when zoomed out)
+    const padding = this.overflowPadding / Math.min(1.0, viewport.zoom);
+    const minX = viewport.x - padding;
+    const maxX = viewport.x + viewport.width / viewport.zoom + padding;
+    const minY = viewport.y - padding;
+    const maxY = viewport.y + viewport.height / viewport.zoom + padding;
+
+    // For a highly dynamic force graph, sometimes nodes fly out fast. 
+    // To prevent the "square slice" look entirely on high density mock data,
+    // we can use a massive padding.
+    const massivePadding = 5000;
 
     const visibleNodes: NeuraNode[] = [];
     const visibleNodeIds = new Set<string>();
@@ -31,11 +38,9 @@ export class CullingSystem {
     // 1. Cull Nodes (and determine semantic zoom level)
     for (const key in nodes) {
       const node = nodes[key]!;
-      // Basic bounding box check
-      if (node.x >= minX && node.x <= maxX && node.y >= minY && node.y <= maxY) {
-        // TODO: Semantic zoom logic based on viewport.zoom
-        // If zoom is very low (macro), maybe we only push "cluster/appartenance" representative nodes
-        // If zoom is high (micro), we push everything
+      // Very lenient bounding box to prevent square cut-offs
+      if (node.x >= minX - massivePadding && node.x <= maxX + massivePadding && 
+          node.y >= minY - massivePadding && node.y <= maxY + massivePadding) {
         visibleNodes.push(node);
         visibleNodeIds.add(node.id);
       }

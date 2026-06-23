@@ -1,7 +1,7 @@
-import { createNeuraStore } from './core/neura-store';
-import type { NeuraState } from './core/neura-store';
-import { WebGLEngine } from './renderer/webgl-engine';
-import { CullingSystem } from './renderer/culling-system';
+import { createNeuraStore } from './core/neura-store.js';
+import type { NeuraState } from './core/neura-store.js';
+import { WebGLEngine } from './renderer/webgl-engine.js';
+import { CullingSystem } from './renderer/culling-system.js';
 
 export function createNeuraInstance(canvas: HTMLCanvasElement, workerUrl: string | URL) {
   const { store, setViewport, addNodes, addEdges } = createNeuraStore();
@@ -83,12 +83,15 @@ export function createNeuraInstance(canvas: HTMLCanvasElement, workerUrl: string
   const generateMockData = (numNodes: number) => {
     const nodes = [];
     for (let i = 0; i < numNodes; i++) {
+      // Use polar coordinates for circular initial distribution
+      const r = Math.sqrt(Math.random()) * 2000;
+      const theta = Math.random() * 2 * Math.PI;
       nodes.push({
         id: `n${i}`,
-        x: (Math.random() - 0.5) * 2000,
-        y: (Math.random() - 0.5) * 2000,
+        x: r * Math.cos(theta),
+        y: r * Math.sin(theta),
         weight: Math.random() * 5,
-        appartenanceId: `cluster_${Math.floor(Math.random() * 5)}`,
+        appartenanceId: `cluster_${Math.floor(Math.random() * 10)}`, // More clusters
         metadata: {},
         visible: true
       });
@@ -96,11 +99,24 @@ export function createNeuraInstance(canvas: HTMLCanvasElement, workerUrl: string
     
     const edges = [];
     for (let i = 0; i < numNodes * 1.5; i++) {
+      // Bias edges to connect nodes within the same cluster occasionally
+      const sourceIdx = Math.floor(Math.random() * numNodes);
+      let targetIdx = Math.floor(Math.random() * numNodes);
+      
+      // 30% chance to force a connection in the same cluster to make physics look better
+      if (Math.random() > 0.7) {
+        const cluster = nodes[sourceIdx]!.appartenanceId;
+        const siblings = nodes.filter(n => n.appartenanceId === cluster);
+        if (siblings.length > 0) {
+          targetIdx = parseInt(siblings[Math.floor(Math.random() * siblings.length)]!.id.replace('n', ''));
+        }
+      }
+
       edges.push({
         id: `e${i}`,
-        sourceId: `n${Math.floor(Math.random() * numNodes)}`,
-        targetId: `n${Math.floor(Math.random() * numNodes)}`,
-        weight: Math.random(),
+        sourceId: `n${sourceIdx}`,
+        targetId: `n${targetIdx}`,
+        weight: Math.random() * 2,
         visible: true
       });
     }

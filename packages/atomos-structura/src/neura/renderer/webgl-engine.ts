@@ -1,4 +1,4 @@
-import type { NeuraNode, NeuraEdge, NeuraViewport } from '../core/neura-store';
+import type { NeuraNode, NeuraEdge, NeuraViewport } from '../core/neura-store.js';
 
 const nodeVertexShaderSource = `
   attribute vec2 a_position;
@@ -44,6 +44,29 @@ const nodeFragmentShaderSource = `
   }
 `;
 
+const edgeVertexShaderSource = `
+  attribute vec2 a_position;
+  
+  uniform vec2 u_resolution;
+  uniform vec2 u_translation;
+  uniform float u_zoom;
+
+  void main() {
+    vec2 position = (a_position + u_translation) * u_zoom;
+    vec2 zeroToOne = position / u_resolution;
+    vec2 zeroToTwo = zeroToOne * 2.0;
+    vec2 clipSpace = zeroToTwo - 1.0;
+    gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+  }
+`;
+
+const edgeFragmentShaderSource = `
+  precision mediump float;
+  void main() {
+    gl_FragColor = vec4(0.3, 0.3, 0.3, 0.5); // Grayish semi-transparent lines
+  }
+`;
+
 export class WebGLEngine {
   private canvas: HTMLCanvasElement;
   private gl: WebGLRenderingContext | WebGL2RenderingContext;
@@ -51,6 +74,9 @@ export class WebGLEngine {
   private nodeProgram: WebGLProgram | null = null;
   private nodePositionBuffer: WebGLBuffer | null = null;
   private nodeColorBuffer: WebGLBuffer | null = null;
+  
+  private edgeProgram: WebGLProgram | null = null;
+  private edgePositionBuffer: WebGLBuffer | null = null;
   
   private animationFrameId: number | null = null;
 
@@ -72,8 +98,12 @@ export class WebGLEngine {
     this.nodeProgram = this.createProgram(nodeVertexShaderSource, nodeFragmentShaderSource);
     if (!this.nodeProgram) throw new Error("Failed to create node program");
 
+    this.edgeProgram = this.createProgram(edgeVertexShaderSource, edgeFragmentShaderSource);
+    if (!this.edgeProgram) throw new Error("Failed to create edge program");
+
     this.nodePositionBuffer = this.gl.createBuffer();
     this.nodeColorBuffer = this.gl.createBuffer();
+    this.edgePositionBuffer = this.gl.createBuffer();
   }
 
   private compileShader(type: number, source: string): WebGLShader | null {
@@ -116,11 +146,55 @@ export class WebGLEngine {
   }
 
   public render(nodes: NeuraNode[], edges: NeuraEdge[], viewport: NeuraViewport) {
-    if (!this.nodeProgram) return;
+    if (!this.nodeProgram || !this.edgeProgram) return;
 
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 
-    // Render Nodes
+    // --- RENDER EDGES ---
+    this.gl.useProgram(this.edgeProgram);
+
+    let eRes = this.gl.getUniformLocation(this.edgeProgram, "u_resolution");
+    let eTrans = this.gl.getUniformLocation(this.edgeProgram, "u_translation");
+    let eZoom = this.gl.getUniformLocation(this.edgeProgram, "u_zoom");
+
+    this.gl.uniform2f(eRes, this.canvas.width, this.canvas.height);
+    this.gl.uniform2f(eTrans, viewport.x, viewport.y);
+    this.gl.uniform1f(eZoom, viewport.zoom);
+
+    // Build edge positions array
+    const edgePositions = new Float32Array(edges.length * 4); // 2 vertices per edge, 2 coords per vertex
+    
+    // Create a lookup for node positions to avoid O(N) find
+    const nodeLookup = new Map<string, NeuraNode>();
+    for (const node of nodes) {
+      nodeLookup.set(node.id, node);
+    }
+
+    let edgeCount = 0;
+    for (let i = 0; i < edges.length; i++) {
+      const edge = edges[i]!;
+      const source = nodeLookup.get(edge.sourceId);
+      const target = nodeLookup.get(edge.targetId);
+      if (source && target) {
+        edgePositions[edgeCount * 4] = source.x;
+        edgePositions[edgeCount * 4 + 1] = source.y;
+        edgePositions[edgeCount * 4 + 2] = target.x;
+        edgePositions[edgeCount * 4 + 3] = target.y;
+        edgeCount++;
+      }
+    }
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.edgePositionBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, edgePositions, this.gl.DYNAMIC_DRAW);
+    
+    const ePosAttr = this.gl.getAttribLocation(this.edgeProgram, "a_position");
+    this.gl.enableVertexAttribArray(ePosAttr);
+    this.gl.vertexAttribPointer(ePosAttr, 2, this.gl.FLOAT, false, 0, 0);
+
+    // Draw lines
+    this.gl.drawArrays(this.gl.LINES, 0, edgeCount * 2);
+
+    // --- RENDER NODES ---
     this.gl.useProgram(this.nodeProgram);
 
     // Uniforms
@@ -142,7 +216,8 @@ export class WebGLEngine {
       const r = ((hash >> 16) & 0xFF) / 255;
       const g = ((hash >> 8) & 0xFF) / 255;
       const b = (hash & 0xFF) / 255;
-      return [Math.max(0.3, r), Math.max(0.3, g), Math.max(0.3, b)];
+      // Boost brightness for nodes to pop against dark background
+      return [Math.min(1.0, r + 0.3), Math.min(1.0, g + 0.3), Math.min(1.0, b + 0.3)];
     };
 
     for (let i = 0; i < nodes.length; i++) {
@@ -170,9 +245,11 @@ export class WebGLEngine {
     this.gl.enableVertexAttribArray(aColor);
     this.gl.vertexAttribPointer(aColor, 3, this.gl.FLOAT, false, 0, 0);
 
-    // Size attribute (fixed for now, could be per-node)
+    // Size attribute based on zoom
     const aSize = this.gl.getAttribLocation(this.nodeProgram, "a_size");
-    this.gl.vertexAttrib1f(aSize, 10.0); // Base size 10 pixels
+    // Ensure dots don't get impossibly small or massively huge
+    let clampedZoom = Math.max(0.5, Math.min(viewport.zoom, 5.0));
+    this.gl.vertexAttrib1f(aSize, 6.0 / clampedZoom); 
 
     // Draw
     this.gl.drawArrays(this.gl.POINTS, 0, nodes.length);
