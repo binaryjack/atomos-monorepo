@@ -2,14 +2,14 @@ import type { NeuraNode, NeuraEdge, NeuraViewport } from '../core/neura-store.js
 
 const nodeVertexShaderSource = `
   attribute vec2 a_position;
-  attribute vec3 a_color;
-  attribute float a_size;
+  attribute vec4 a_color;
+  attribute float a_size_attr;
   
   uniform vec2 u_resolution;
   uniform vec2 u_translation;
   uniform float u_zoom;
 
-  varying vec3 v_color;
+  varying vec4 v_color;
 
   void main() {
     // Apply pan and zoom
@@ -23,8 +23,9 @@ const nodeVertexShaderSource = `
     // WebGL Y is flipped
     gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
     
-    // Size is scaled by zoom
-    gl_PointSize = a_size * u_zoom;
+    // Size is scaled by zoom and by the node's weight score
+    float clampedZoom = max(0.5, min(u_zoom, 5.0));
+    gl_PointSize = (10.0 + (a_size_attr * 30.0)) / clampedZoom;
     
     v_color = a_color;
   }
@@ -32,7 +33,7 @@ const nodeVertexShaderSource = `
 
 const nodeFragmentShaderSource = `
   precision mediump float;
-  varying vec3 v_color;
+  varying vec4 v_color;
 
   void main() {
     // Draw a circle instead of a square
@@ -40,7 +41,7 @@ const nodeFragmentShaderSource = `
     if(length(coord) > 0.5) {
       discard;
     }
-    gl_FragColor = vec4(v_color, 1.0);
+    gl_FragColor = v_color;
   }
 `;
 
@@ -74,6 +75,7 @@ export class WebGLEngine {
   private nodeProgram: WebGLProgram | null = null;
   private nodePositionBuffer: WebGLBuffer | null = null;
   private nodeColorBuffer: WebGLBuffer | null = null;
+  private nodeSizeBuffer: WebGLBuffer | null = null;
   
   private edgeProgram: WebGLProgram | null = null;
   private edgePositionBuffer: WebGLBuffer | null = null;
@@ -103,6 +105,7 @@ export class WebGLEngine {
 
     this.nodePositionBuffer = this.gl.createBuffer();
     this.nodeColorBuffer = this.gl.createBuffer();
+    this.nodeSizeBuffer = this.gl.createBuffer();
     this.edgePositionBuffer = this.gl.createBuffer();
   }
 
@@ -208,7 +211,8 @@ export class WebGLEngine {
 
     // Setup attribute arrays
     const positions = new Float32Array(nodes.length * 2);
-    const colors = new Float32Array(nodes.length * 3);
+    const colors = new Float32Array(nodes.length * 4); // RGBA
+    const sizes = new Float32Array(nodes.length);
     
     // Simple color hashing based on appartenanceId for demo
     const getColor = (id: string): [number, number, number] => {
@@ -216,8 +220,7 @@ export class WebGLEngine {
       const r = ((hash >> 16) & 0xFF) / 255;
       const g = ((hash >> 8) & 0xFF) / 255;
       const b = (hash & 0xFF) / 255;
-      // Boost brightness for nodes to pop against dark background
-      return [Math.min(1.0, r + 0.3), Math.min(1.0, g + 0.3), Math.min(1.0, b + 0.3)];
+      return [r, g, b];
     };
 
     for (let i = 0; i < nodes.length; i++) {
@@ -226,9 +229,17 @@ export class WebGLEngine {
       positions[i * 2 + 1] = node.y;
       
       const [r, g, b] = getColor(node.appartenanceId);
-      colors[i * 3] = r;
-      colors[i * 3 + 1] = g;
-      colors[i * 3 + 2] = b;
+      
+      // Calculate opacity and brightness based on weight (score)
+      const brightness = 0.5 + (node.weight * 0.7); // Brightens highly attractive nodes
+      const opacity = 0.2 + (node.weight * 0.8); // 0.2 to 1.0 opacity
+      
+      colors[i * 4] = Math.min(1.0, r * brightness);
+      colors[i * 4 + 1] = Math.min(1.0, g * brightness);
+      colors[i * 4 + 2] = Math.min(1.0, b * brightness);
+      colors[i * 4 + 3] = opacity;
+      
+      sizes[i] = node.weight;
     }
 
     // Bind Position Buffer
@@ -243,13 +254,14 @@ export class WebGLEngine {
     this.gl.bufferData(this.gl.ARRAY_BUFFER, colors, this.gl.DYNAMIC_DRAW);
     const aColor = this.gl.getAttribLocation(this.nodeProgram, "a_color");
     this.gl.enableVertexAttribArray(aColor);
-    this.gl.vertexAttribPointer(aColor, 3, this.gl.FLOAT, false, 0, 0);
-
-    // Size attribute based on zoom
-    const aSize = this.gl.getAttribLocation(this.nodeProgram, "a_size");
-    // Ensure dots don't get impossibly small or massively huge
-    let clampedZoom = Math.max(0.5, Math.min(viewport.zoom, 5.0));
-    this.gl.vertexAttrib1f(aSize, 6.0 / clampedZoom); 
+    this.gl.vertexAttribPointer(aColor, 4, this.gl.FLOAT, false, 0, 0);
+    
+    // Bind Size Buffer
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.nodeSizeBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, sizes, this.gl.DYNAMIC_DRAW);
+    const aSizeAttr = this.gl.getAttribLocation(this.nodeProgram, "a_size_attr");
+    this.gl.enableVertexAttribArray(aSizeAttr);
+    this.gl.vertexAttribPointer(aSizeAttr, 1, this.gl.FLOAT, false, 0, 0);
 
     // Draw
     this.gl.drawArrays(this.gl.POINTS, 0, nodes.length);

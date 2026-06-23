@@ -14,7 +14,9 @@ export interface PhysicsEdge {
 let nodes: PhysicsNode[] = [];
 let edges: PhysicsEdge[] = [];
 let isRunning = false;
-let loopId: any = null;
+let globalAlpha = 1.0;
+const alphaMin = 0.001;
+const alphaDecay = 0.95; // cools down by 5% every tick
 
 // Calculate centers of mass for "appartenance" groups
 const calculateAppartenanceCenters = () => {
@@ -41,10 +43,8 @@ const calculateAppartenanceCenters = () => {
 };
 
 const simulateTick = () => {
-  const alpha = 0.05; // cooling factor
-  const repulsionForce = 50;
-  const attractionForce = 0.01;
-  const appartenanceGravity = 0.02; 
+  const attractionForce = 0.05;
+  const appartenanceGravity = 0.1; 
 
   const centers = calculateAppartenanceCenters();
 
@@ -61,7 +61,11 @@ const simulateTick = () => {
     const dx = target.x - source.x;
     const dy = target.y - source.y;
     
-    const force = attractionForce * (edge.weight || 1) * alpha;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const restingDistance = 40; // nodes want to be 40px apart
+    const diff = (dist - restingDistance) / dist;
+    
+    const force = diff * attractionForce * (edge.weight || 1) * globalAlpha;
     
     source.x += dx * force;
     source.y += dy * force;
@@ -75,26 +79,39 @@ const simulateTick = () => {
     if (center) {
       const dx = center.x - node.x;
       const dy = center.y - node.y;
-      node.x += dx * appartenanceGravity * alpha;
-      node.y += dy * appartenanceGravity * alpha;
+      
+      // Make them form a shell around the center rather than all converging to the exact center point
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const idealRadius = 600; // Large radius for high node count to spread them out
+      const diff = (dist - idealRadius) / dist;
+      
+      node.x += dx * diff * appartenanceGravity * globalAlpha;
+      node.y += dy * diff * appartenanceGravity * globalAlpha;
     }
   }
 
   // Optional: Global gravity to keep everything centered
   for (const node of nodes) {
-    node.x -= node.x * 0.001 * alpha;
-    node.y -= node.y * 0.001 * alpha;
+    node.x -= node.x * 0.001 * globalAlpha;
+    node.y -= node.y * 0.001 * globalAlpha;
   }
 };
 
 const tickLoop = () => {
   if (!isRunning) return;
+  
   simulateTick();
   
   // Pack position data to send back efficiently
-  // Instead of full objects, send an array of {id, x, y}
   const positions = nodes.map(n => ({ id: n.id, x: n.x, y: n.y }));
   self.postMessage({ type: 'TICK_RESULT', payload: positions });
+  
+  globalAlpha *= alphaDecay;
+
+  if (globalAlpha < alphaMin) {
+    isRunning = false; // System has cooled down and is now static
+    return;
+  }
   
   // Throttle physics to ~30Hz
   setTimeout(tickLoop, 33);
@@ -107,10 +124,12 @@ self.onmessage = (event: MessageEvent) => {
     case 'INIT_DATA':
       nodes = payload.nodes.map((n: any) => ({ id: n.id, x: n.x, y: n.y, appartenanceId: n.appartenanceId }));
       edges = payload.edges.map((e: any) => ({ sourceId: e.sourceId, targetId: e.targetId, weight: e.weight }));
+      globalAlpha = 1.0; // Reset heat when new data arrives
       break;
     case 'START':
       if (!isRunning) {
         isRunning = true;
+        globalAlpha = 1.0; // Re-heat the system
         tickLoop();
       }
       break;
