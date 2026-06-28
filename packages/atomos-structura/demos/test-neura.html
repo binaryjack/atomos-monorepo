@@ -31,10 +31,10 @@
   </div>
 
   <script type="module">
-    import { createNeuraInstance } from '../dist/neura/create-neura-instance.js?v=8';
+    import { createNeuraInstance } from '../dist/neura/create-neura-instance.js?v=9';
 
     const canvas = document.getElementById('neura-canvas');
-    const workerUrl = new URL('../dist/neura/physics/worker.js?v=8', window.location.href);
+    const workerUrl = new URL('../dist/neura/physics/worker.js?v=9', window.location.href);
 
     const neura = createNeuraInstance(canvas, workerUrl);
 

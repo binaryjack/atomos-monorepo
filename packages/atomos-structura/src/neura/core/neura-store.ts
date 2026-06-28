@@ -30,13 +30,17 @@ export interface NeuraState {
   nodes: Record<string, NeuraNode>;
   edges: Record<string, NeuraEdge>;
   viewport: NeuraViewport;
+  hoveredNodeId: string | null;
+  selectedNodeId: string | null;
 }
 
 export function createNeuraStore() {
   const store = createSignal<NeuraState>({
     nodes: {},
     edges: {},
-    viewport: { x: 0, y: 0, zoom: 1, width: 800, height: 600 }
+    viewport: { x: 0, y: 0, zoom: 1, width: 800, height: 600 },
+    hoveredNodeId: null,
+    selectedNodeId: null
   });
 
   const setViewport = (viewport: Partial<NeuraViewport>) => {

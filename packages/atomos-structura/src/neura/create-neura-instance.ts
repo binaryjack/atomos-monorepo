@@ -11,6 +11,25 @@ export function createNeuraInstance(canvas: HTMLCanvasElement, workerUrl: string
   // Initialize Physics Worker
   const worker = new Worker(workerUrl, { type: 'module' });
   
+  // Setup Overlay container
+  const parent = canvas.parentElement;
+  if (parent) {
+    if (getComputedStyle(parent).position === 'static') {
+      parent.style.position = 'relative';
+    }
+  }
+  const overlay = document.createElement('div');
+  overlay.style.position = 'absolute';
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100%';
+  overlay.style.height = '100%';
+  overlay.style.pointerEvents = 'none';
+  overlay.style.overflow = 'hidden';
+  if (parent) parent.appendChild(overlay);
+
+  const labelsMap = new Map<string, HTMLDivElement>();
+
   worker.onmessage = (e) => {
     if (e.data.type === 'TICK_RESULT') {
       const positions = e.data.payload as { id: string, x: number, y: number }[];
@@ -47,18 +66,59 @@ export function createNeuraInstance(canvas: HTMLCanvasElement, workerUrl: string
   });
 
   window.addEventListener('mouseup', () => { isDragging = false; });
-  window.addEventListener('mousemove', e => {
-    if (!isDragging) return;
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    
+  canvas.addEventListener('mousemove', e => {
+    if (isDragging) {
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      
+      const state = store.value;
+      setViewport({ 
+        x: state.viewport.x + dx / state.viewport.zoom, 
+        y: state.viewport.y + dy / state.viewport.zoom 
+      });
+    } else {
+      // Hover detection
+      const state = store.value;
+      const rect = canvas.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+      
+      const worldX = (offsetX / state.viewport.zoom) - state.viewport.x;
+      const worldY = (offsetY / state.viewport.zoom) - state.viewport.y;
+      
+      let closestNodeId: string | null = null;
+      let minDistance = 15 / state.viewport.zoom; // hit radius scales with zoom
+      
+      for (const key in state.nodes) {
+        const n = state.nodes[key]!;
+        const dx = worldX - n.x;
+        const dy = worldY - n.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Node radius is related to its weight. We give a slight bump to the hit box based on weight.
+        const hitRadius = minDistance + (n.weight * 20 / state.viewport.zoom);
+        
+        if (dist < hitRadius && dist < minDistance) {
+          minDistance = dist;
+          closestNodeId = n.id;
+        }
+      }
+      
+      if (state.hoveredNodeId !== closestNodeId) {
+        store.set({ ...state, hoveredNodeId: closestNodeId });
+      }
+    }
+  });
+
+  canvas.addEventListener('click', e => {
     const state = store.value;
-    setViewport({ 
-      x: state.viewport.x + dx / state.viewport.zoom, 
-      y: state.viewport.y + dy / state.viewport.zoom 
-    });
+    if (state.hoveredNodeId !== state.selectedNodeId) {
+      store.set({ ...state, selectedNodeId: state.hoveredNodeId });
+    } else if (state.hoveredNodeId === null) {
+      store.set({ ...state, selectedNodeId: null });
+    }
   });
 
   canvas.addEventListener('wheel', e => {
@@ -75,8 +135,73 @@ export function createNeuraInstance(canvas: HTMLCanvasElement, workerUrl: string
     // 1. Cull off-screen items
     const { visibleNodes, visibleEdges } = culling.cull(state.nodes, state.edges, state.viewport);
     
-    // 2. Render visible items
-    webgl.render(visibleNodes, visibleEdges, state.viewport);
+    // 2. Compute Active Focus
+    const activeNodeIds = new Set<string>();
+    const activeEdgeIds = new Set<string>();
+    const focusId = state.hoveredNodeId || state.selectedNodeId;
+    
+    if (focusId) {
+      activeNodeIds.add(focusId);
+      for (const edgeKey in state.edges) {
+        const edge = state.edges[edgeKey]!;
+        if (edge.sourceId === focusId || edge.targetId === focusId) {
+          activeEdgeIds.add(edge.id);
+          activeNodeIds.add(edge.sourceId);
+          activeNodeIds.add(edge.targetId);
+        }
+      }
+    }
+    
+    // 3. Render visible items
+    webgl.render(visibleNodes, visibleEdges, state.viewport, activeNodeIds, activeEdgeIds, !!focusId);
+    
+    // 4. Update HTML Overlay Labels
+    const renderedIds = new Set<string>();
+    for (const node of visibleNodes) {
+      if (node.weight >= 1.0 || node.id === focusId) {
+        renderedIds.add(node.id);
+        let el = labelsMap.get(node.id);
+        if (!el) {
+          el = document.createElement('div');
+          el.style.position = 'absolute';
+          el.style.fontFamily = 'sans-serif';
+          el.style.textShadow = '0 2px 4px rgba(0,0,0,0.8)';
+          el.style.transform = 'translate(-50%, -100%)'; // center above node
+          el.style.marginTop = '-15px';
+          el.style.whiteSpace = 'nowrap';
+          el.innerText = node.metadata?.name || `Node ${node.id}`;
+          overlay.appendChild(el);
+          labelsMap.set(node.id, el);
+        }
+        
+        // Project to screen space
+        const screenX = (node.x + state.viewport.x) * state.viewport.zoom;
+        const screenY = (node.y + state.viewport.y) * state.viewport.zoom;
+        
+        el.style.left = `${screenX}px`;
+        el.style.top = `${screenY}px`;
+        
+        if (node.id === focusId) {
+           el.style.zIndex = '100';
+           el.style.color = '#ffcc00';
+           el.style.fontSize = '14px';
+           el.style.fontWeight = 'bold';
+        } else {
+           el.style.zIndex = '10';
+           el.style.color = '#ffffff';
+           el.style.fontSize = '12px';
+           el.style.fontWeight = 'normal';
+        }
+      }
+    }
+    
+    // Remove invisible labels
+    for (const [id, el] of labelsMap.entries()) {
+      if (!renderedIds.has(id)) {
+        el.remove();
+        labelsMap.delete(id);
+      }
+    }
   });
 
   // Generate Mock Data for Testing (Scale-Free Network using Barabási-Albert model)
@@ -163,10 +288,26 @@ export function createNeuraInstance(canvas: HTMLCanvasElement, workerUrl: string
       n.weight = Math.max(0.1, degree / maxDegree);
     }
 
-    addNodes(nodes);
-    addEdges(edges);
+    loadGraph(nodes, edges);
+  };
+
+  const loadGraph = (nodes: any[], edges: any[]) => {
+    // Reset store with new data
+    const state = store.value;
+    const nodeMap: Record<string, any> = {};
+    const edgeMap: Record<string, any> = {};
+    for(const n of nodes) nodeMap[n.id] = n;
+    for(const e of edges) edgeMap[e.id] = e;
     
-    // Send data to physics engine
+    store.set({
+      ...state,
+      nodes: nodeMap,
+      edges: edgeMap,
+      hoveredNodeId: null,
+      selectedNodeId: null
+    });
+    
+    worker.postMessage({ type: 'STOP' });
     worker.postMessage({ type: 'INIT_DATA', payload: { nodes, edges } });
     worker.postMessage({ type: 'START' });
   };
@@ -175,11 +316,13 @@ export function createNeuraInstance(canvas: HTMLCanvasElement, workerUrl: string
     store,
     webgl,
     worker,
+    loadGraph,
     generateMockData,
     destroy: () => {
       resizeObserver.disconnect();
       webgl.destroy();
       worker.terminate();
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
     }
   };
 }

@@ -47,10 +47,14 @@ const nodeFragmentShaderSource = `
 
 const edgeVertexShaderSource = `
   attribute vec2 a_position;
+  attribute vec4 a_color;
   
   uniform vec2 u_resolution;
   uniform vec2 u_translation;
   uniform float u_zoom;
+
+  varying vec4 v_color;
+  varying vec2 v_world_pos;
 
   void main() {
     vec2 position = (a_position + u_translation) * u_zoom;
@@ -58,13 +62,21 @@ const edgeVertexShaderSource = `
     vec2 zeroToTwo = zeroToOne * 2.0;
     vec2 clipSpace = zeroToTwo - 1.0;
     gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+    
+    v_color = a_color;
+    v_world_pos = a_position;
   }
 `;
 
 const edgeFragmentShaderSource = `
   precision mediump float;
+  varying vec4 v_color;
+  varying vec2 v_world_pos;
+  uniform float u_time;
+  
   void main() {
-    gl_FragColor = vec4(0.3, 0.3, 0.3, 0.5); // Grayish semi-transparent lines
+    float pulse = 0.5 + 0.5 * sin(u_time * 4.0 + (v_world_pos.x + v_world_pos.y) * 0.05);
+    gl_FragColor = vec4(v_color.rgb, v_color.a * (0.6 + 0.4 * pulse)); 
   }
 `;
 
@@ -79,6 +91,7 @@ export class WebGLEngine {
   
   private edgeProgram: WebGLProgram | null = null;
   private edgePositionBuffer: WebGLBuffer | null = null;
+  private edgeColorBuffer: WebGLBuffer | null = null;
   
   private animationFrameId: number | null = null;
 
@@ -107,6 +120,7 @@ export class WebGLEngine {
     this.nodeColorBuffer = this.gl.createBuffer();
     this.nodeSizeBuffer = this.gl.createBuffer();
     this.edgePositionBuffer = this.gl.createBuffer();
+    this.edgeColorBuffer = this.gl.createBuffer();
   }
 
   private compileShader(type: number, source: string): WebGLShader | null {
@@ -148,7 +162,7 @@ export class WebGLEngine {
     this.gl.viewport(0, 0, width, height);
   }
 
-  public render(nodes: NeuraNode[], edges: NeuraEdge[], viewport: NeuraViewport) {
+  public render(nodes: NeuraNode[], edges: NeuraEdge[], viewport: NeuraViewport, activeNodeIds: Set<string>, activeEdgeIds: Set<string>, hasActiveFocus: boolean) {
     if (!this.nodeProgram || !this.edgeProgram) return;
 
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
@@ -159,13 +173,16 @@ export class WebGLEngine {
     let eRes = this.gl.getUniformLocation(this.edgeProgram, "u_resolution");
     let eTrans = this.gl.getUniformLocation(this.edgeProgram, "u_translation");
     let eZoom = this.gl.getUniformLocation(this.edgeProgram, "u_zoom");
+    let eTime = this.gl.getUniformLocation(this.edgeProgram, "u_time");
 
     this.gl.uniform2f(eRes, this.canvas.width, this.canvas.height);
     this.gl.uniform2f(eTrans, viewport.x, viewport.y);
     this.gl.uniform1f(eZoom, viewport.zoom);
+    this.gl.uniform1f(eTime, performance.now() / 1000.0);
 
     // Build edge positions array
     const edgePositions = new Float32Array(edges.length * 4); // 2 vertices per edge, 2 coords per vertex
+    const edgeColors = new Float32Array(edges.length * 8); // 2 vertices per edge, 4 coords (rgba)
     
     // Create a lookup for node positions to avoid O(N) find
     const nodeLookup = new Map<string, NeuraNode>();
@@ -183,16 +200,36 @@ export class WebGLEngine {
         edgePositions[edgeCount * 4 + 1] = source.y;
         edgePositions[edgeCount * 4 + 2] = target.x;
         edgePositions[edgeCount * 4 + 3] = target.y;
+        
+        let r = 0.3, g = 0.3, b = 0.3, a = 0.5;
+        if (hasActiveFocus) {
+          if (activeEdgeIds.has(edge.id)) {
+            r = 0.8; g = 0.8; b = 1.0; a = 0.9; // Highlight color
+          } else {
+            a = 0.05; // Fade out inactive edges heavily
+          }
+        }
+        
+        // Vert 1
+        edgeColors[edgeCount * 8] = r; edgeColors[edgeCount * 8 + 1] = g; edgeColors[edgeCount * 8 + 2] = b; edgeColors[edgeCount * 8 + 3] = a;
+        // Vert 2
+        edgeColors[edgeCount * 8 + 4] = r; edgeColors[edgeCount * 8 + 5] = g; edgeColors[edgeCount * 8 + 6] = b; edgeColors[edgeCount * 8 + 7] = a;
+        
         edgeCount++;
       }
     }
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.edgePositionBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, edgePositions, this.gl.DYNAMIC_DRAW);
-    
     const ePosAttr = this.gl.getAttribLocation(this.edgeProgram, "a_position");
     this.gl.enableVertexAttribArray(ePosAttr);
     this.gl.vertexAttribPointer(ePosAttr, 2, this.gl.FLOAT, false, 0, 0);
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.edgeColorBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, edgeColors, this.gl.DYNAMIC_DRAW);
+    const eColorAttr = this.gl.getAttribLocation(this.edgeProgram, "a_color");
+    this.gl.enableVertexAttribArray(eColorAttr);
+    this.gl.vertexAttribPointer(eColorAttr, 4, this.gl.FLOAT, false, 0, 0);
 
     // Draw lines
     this.gl.drawArrays(this.gl.LINES, 0, edgeCount * 2);
@@ -231,8 +268,18 @@ export class WebGLEngine {
       const [r, g, b] = getColor(node.appartenanceId);
       
       // Calculate opacity and brightness based on weight (score)
-      const brightness = 0.5 + (node.weight * 0.7); // Brightens highly attractive nodes
-      const opacity = 0.2 + (node.weight * 0.8); // 0.2 to 1.0 opacity
+      let brightness = 0.5 + (node.weight * 0.7); // Brightens highly attractive nodes
+      let opacity = 0.2 + (node.weight * 0.8); // 0.2 to 1.0 opacity
+      
+      if (hasActiveFocus) {
+        if (activeNodeIds.has(node.id)) {
+          brightness = 1.0;
+          opacity = 1.0;
+        } else {
+          opacity = 0.05; // Fade out inactive nodes heavily
+          brightness *= 0.5;
+        }
+      }
       
       colors[i * 4] = Math.min(1.0, r * brightness);
       colors[i * 4 + 1] = Math.min(1.0, g * brightness);
