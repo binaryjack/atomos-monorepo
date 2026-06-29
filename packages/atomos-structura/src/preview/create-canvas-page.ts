@@ -64,7 +64,7 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
   
   // Root — fills full viewport
   const root = document.createElement('div');
-  root.style.cssText = 'position:fixed;inset:0;overflow:hidden;background:var(--vbs-bg-input, #09090b);';
+  root.style.cssText = 'position:fixed;inset:0;overflow:hidden;background:var(--vbs-bg-input, #09090b);container-type:inline-size;';
 
   // Schema tabs bar
   let schemaTabs: any = null;
@@ -438,7 +438,7 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
     const style = document.createElement('style');
     style.id = 'vbs-responsive-toolbars';
     style.textContent = `
-      @media (max-width: 768px) {
+      @container (max-width: 768px) {
         .vbs-palette {
           opacity: 0.3;
           transform: translateY(-50%) scale(0.85) !important;
