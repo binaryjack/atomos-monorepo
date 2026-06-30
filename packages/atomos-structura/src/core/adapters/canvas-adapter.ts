@@ -32,6 +32,7 @@ export interface CanvasAdapter {
   // View Operations (UI State)
   readonly setViewport: (viewport: Partial<{ zoom: number; pan: { x: number; y: number } }>) => void;
   readonly selectEntity: (entityId: string | null) => void;
+  readonly selectEntities: (entityIds: readonly string[]) => void;
   readonly getViewport: () => { zoom: number; pan: { x: number; y: number } };
   readonly getSelectedEntityId: () => string | null;
   
@@ -140,8 +141,8 @@ export const createCanvasAdapter = function(instanceId: string): CanvasAdapter {
     viewStore.dispatch({ type: 'SelectEntity', entityId });
   };
   
-  const selectEntities = function(entityIds: string[]) {
-    viewStore.dispatch({ type: 'SetMultiSelection', entityIds });
+  const selectEntities = function(entityIds: readonly string[]) {
+    viewStore.dispatch({ type: 'SetMultiSelection', entityIds: [...entityIds] });
   };
   
   const getViewport = function() {

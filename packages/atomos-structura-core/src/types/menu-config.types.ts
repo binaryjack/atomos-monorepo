@@ -26,6 +26,8 @@ export interface WorkspaceMenuConfig {
   readonly export_svg?: MenuItemConfig;
   readonly settings?: MenuItemConfig;
   readonly about?: MenuItemConfig;
+  /** Palette/toolbox visibility control */
+  readonly toolbox?: MenuItemConfig;
   /** Custom actions to add to the toolbar (emits onCustomAction) */
   readonly customActions?: { id: string; label: string; icon?: string }[];
 }

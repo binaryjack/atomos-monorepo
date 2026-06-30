@@ -62,14 +62,14 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
   // Inject design system CSS variables
   injectDesignSystemTokens();
   
-  // Root — fills full viewport
+  // Root — fills parent container natively
   const root = document.createElement('div');
-  root.style.cssText = 'position:fixed;inset:0;overflow:hidden;background:var(--vbs-bg-input, #09090b);container-type:inline-size;';
+  root.style.cssText = 'position:relative;width:100%;height:100%;overflow:hidden;background:var(--vbs-bg-input, #09090b);container-type:inline-size;';
 
   // Schema tabs bar
   let schemaTabs: any = null;
   let TAB_H = 0;
-  if (config?.allow_multiple_schemas !== false) {
+  if (config?.allow_multiple_schemas !== false && !config?.headless) {
     schemaTabs = createSchemaTabs(instanceId);
     root.appendChild(schemaTabs.element);
     cleanups.push(schemaTabs.cleanup.destroy);
@@ -197,8 +197,26 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
   applyViewport();
   cleanups.push(viewport.cleanup);
 
+  // ── Auto Readonly on Small Canvas ──────────────────────────────────────────
+  let isSmallCanvas = false;
+  const canvasResizeObserver = new ResizeObserver(entries => {
+    for (const entry of entries) {
+      const isSmall = entry.contentRect.width < 500 || entry.contentRect.height < 400;
+      if (isSmall !== isSmallCanvas) {
+        isSmallCanvas = isSmall;
+        // Optionally dispatch an event or rely on reactiveness. For now just update the flag.
+      }
+    }
+  });
+  canvasResizeObserver.observe(canvasWrap);
+  cleanups.push(() => canvasResizeObserver.disconnect());
+
+  const isReadonly = () => {
+    return isSmallCanvas || !!config?.headless || (store.get_state().workspace.config?.readonly ?? false);
+  };
+
   // Workspace
-  const workspace = createWorkspaceManager(svg, viewportGroup, instanceId, () => store.get_state().workspace.config?.readonly ?? false);
+  const workspace = createWorkspaceManager(svg, viewportGroup, instanceId, isReadonly);
   cleanups.push(workspace.cleanup.destroy);
 
   // Apply persisted appearance tokens AFTER design system is injected
@@ -208,16 +226,18 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
   }
 
   // Phase 5: Shape Palette (Drag & Drop or Click to spawn)
-  const palette = document.createElement('div');
-  palette.classList.add('vbs-palette');
-  palette.style.cssText = [
-    'position:absolute;top:50%;left:16px;transform:translateY(-50%);',
-    'display:flex;flex-direction:column;gap:8px;z-index:20;',
-    'background:rgba(15,23,42,0.95);backdrop-filter:blur(8px);',
-    'border:1px solid var(--vbs-border, #27272a);border-radius:12px;padding:8px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);'
-  ].join('');
+  let palette: HTMLDivElement | undefined;
+  if (!config?.headless && config?.menu?.toolbox?.available !== false) {
+    palette = document.createElement('div');
+    palette.classList.add('vbs-palette');
+    palette.style.cssText = [
+      'position:absolute;top:50%;left:16px;transform:translateY(-50%);',
+      'display:flex;flex-direction:column;gap:8px;z-index:20;',
+      'background:rgba(15,23,42,0.95);backdrop-filter:blur(8px);',
+      'border:1px solid var(--vbs-border, #27272a);border-radius:12px;padding:8px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);'
+    ].join('');
 
-  const toolboxConfig = getToolboxConfig();
+    const toolboxConfig = getToolboxConfig();
 
   toolboxConfig.toolsets.forEach((toolset) => {
     // Container for the tool or toolset
@@ -350,10 +370,11 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
       setContainer.appendChild(flyout);
     }
     
-    palette.appendChild(setContainer);
-  });
+      palette!.appendChild(setContainer);
+    });
 
-  canvasWrap.appendChild(palette);
+    canvasWrap.appendChild(palette!);
+  }
 
   // Allow canvas back to receive drops
   canvasWrap.ondragover = (e) => {
@@ -392,9 +413,11 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
 
   createInteractiveEntityDemo(workspace, instanceId);
 
-  // Minimap — anchored to the right edge of the shape palette
-  const minimap = createMinimap(getEntityManager(instanceId), viewport, canvasWrap, palette);
-  cleanups.push(minimap.cleanup.destroy);
+  let minimap: any = null;
+  if (!config?.headless) {
+    minimap = createMinimap(getEntityManager(instanceId), viewport, canvasWrap, palette);
+    cleanups.push(minimap.cleanup.destroy);
+  }
 
   // Entity search (Ctrl+K)
   const entitySearch = createEntitySearch(getEntityManager(instanceId), viewport, canvasWrap);
@@ -444,8 +467,11 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
   // Rubber-band multi-select
   const rubberBand = createRubberBand(svg, viewportGroup, viewport, getEntityManager(instanceId));
   cleanups.push(rubberBand.cleanup.destroy);
-  // Visual selection feedback — highlight matched entities with a blue glow
   cleanups.push(rubberBand.subscribe(ids => {
+    // 1. Dispatch to global view store
+    getCanvasAdapter(instanceId).selectEntities(Array.from(ids));
+    
+    // 2. Visual selection feedback — highlight matched entities
     workspace.workspaceState.value.entities.forEach((instance, entityId) => {
       (instance.element as SVGElement).style.filter = ids.has(entityId)
         ? 'drop-shadow(0 0 6px #3b82f6)'
@@ -556,6 +582,55 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
           });
           return null; // swallow — result will arrive via SSE
         }
+
+        if (action.type === 'schema-renamed') {
+          fetch(mcpServerUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              method: 'atomos-structura/rename-schema',
+              params: { id: action.id, name: action.name },
+              id: `schema-renamed-${Date.now()}`,
+            }),
+          }).catch(err => {
+            console.error('[Canvas] MCP rename-schema failed:', err);
+            store.dispatch({ type: 'schema-renamed', id: action.id, name: action.name });
+          });
+          return null;
+        }
+
+        if (action.type === 'schema-deleted') {
+          fetch(mcpServerUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              method: 'atomos-structura/delete-schema',
+              params: { id: action.id },
+              id: `schema-deleted-${Date.now()}`,
+            }),
+          }).catch(err => {
+            console.error('[Canvas] MCP delete-schema failed:', err);
+            store.dispatch({ type: 'schema-deleted', id: action.id });
+          });
+          return null;
+        }
+
+        if (action.type === 'schema-activated') {
+          fetch(mcpServerUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              method: 'atomos-structura/activate-schema',
+              params: { id: action.id },
+              id: `schema-activated-${Date.now()}`,
+            }),
+          }).catch(err => {
+            console.error('[Canvas] MCP activate-schema failed:', err);
+            store.dispatch({ type: 'schema-activated', id: action.id });
+          });
+          return null;
+        }
+
         return action;
       });
       cleanups.push(removeMcpSchemaHook);
@@ -659,7 +734,7 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
 
       // 5. Always refresh the minimap after reconcile so switching to an empty
       //    schema clears stale thumbnails (no EntityCreated events fire otherwise).
-      minimap.refresh();
+      if (minimap) minimap.refresh();
     } finally {
       reconciling = false;
     }
@@ -864,6 +939,39 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
     schemaPanel.cleanup.destroy();
     dagObserver.cleanup();
   });
+  }
+
+  // ── Hover Zone Message (Phase 3) ───────────────────────────────────────────
+  if (config?.hoverZoneMessage) {
+    const { zone, text } = config.hoverZoneMessage;
+    const tooltip = document.createElement('div');
+    tooltip.textContent = text;
+    tooltip.style.cssText = [
+      'position:absolute;z-index:10000;background:rgba(15,23,42,0.9);color:white;padding:6px 12px;border-radius:4px;',
+      'font-size:12px;pointer-events:none;opacity:0;transition:opacity 0.2s;white-space:nowrap;backdrop-filter:blur(4px);',
+      'border:1px solid #334155;transform:translate(-50%, -50%);left:50%;top:50%;'
+    ].join('');
+    root.appendChild(tooltip);
+
+    const createZone = (css: string) => {
+      const z = document.createElement('div');
+      z.style.cssText = `position:absolute;z-index:9998;background:transparent;${css}`;
+      z.onmouseenter = () => { if (isReadonly()) tooltip.style.opacity = '1'; };
+      z.onmouseleave = () => { tooltip.style.opacity = '0'; };
+      
+      const updatePointerEvents = () => { z.style.pointerEvents = isReadonly() ? 'auto' : 'none'; };
+      updatePointerEvents();
+      const interval = setInterval(updatePointerEvents, 500);
+      cleanups.push(() => clearInterval(interval));
+
+      root.appendChild(z);
+    };
+
+    const thickness = '20px';
+    if (zone === 'top' || zone === 'all') createZone(`top:0;left:0;right:0;height:${thickness};cursor:help;`);
+    if (zone === 'bottom' || zone === 'all') createZone(`bottom:0;left:0;right:0;height:${thickness};cursor:help;`);
+    if (zone === 'left' || zone === 'all') createZone(`left:0;top:0;bottom:0;width:${thickness};cursor:help;`);
+    if (zone === 'right' || zone === 'all') createZone(`right:0;top:0;bottom:0;width:${thickness};cursor:help;`);
   }
 
   return {

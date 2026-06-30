@@ -39,6 +39,8 @@ export interface McpWorkspaceState {
   is_settings_open?: boolean;
   /** Resolved menu config, updated via sync-state from the browser. */
   menu_config?: WorkspaceMenuConfig;
+  /** Resolved toolbox config, updated via sync-state or tools. */
+  toolbox_config?: any; // ToolboxConfiguration from @atomos-web/prime
 }
 
 // Public request/response types
@@ -429,12 +431,13 @@ const handle_get_schema = (srv: VbsMcpServerInstance, req: McpRequest): McpRespo
 };
 
 const handle_sync_state = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
-  const { schema_id, entities = [], links = [], settings, menu_config } = req.params as {
+  const { schema_id, entities = [], links = [], settings, menu_config, toolbox_config } = req.params as {
     schema_id?: string;
     entities?: Entity[];
     links?: LinkProps[];
     settings?: Record<string, unknown>;
     menu_config?: WorkspaceMenuConfig;
+    toolbox_config?: any;
   };
   if (schema_id && find_canvas_for_schema(srv._state, schema_id)) {
     srv._state = update_schema_by_id(srv._state, schema_id, s => ({ ...s, entities: [...entities], links: [...links] }));
@@ -455,6 +458,10 @@ const handle_sync_state = (srv: VbsMcpServerInstance, req: McpRequest): McpRespo
   if (menu_config !== undefined) {
     srv._state = { ...srv._state, menu_config };
     emit_sse(srv._clients, 'menu-config', menu_config);
+  }
+  if (toolbox_config !== undefined) {
+    srv._state = { ...srv._state, toolbox_config };
+    emit_sse(srv._clients, 'toolbox-config', toolbox_config);
   }
   // sync-state originates from the browser -- do NOT emit SSE to avoid a feedback loop
   return { result: { success: true }, id: req.id };
@@ -946,6 +953,20 @@ const handle_tools_list = (srv: VbsMcpServerInstance, req: McpRequest): McpRespo
           }
         },
         {
+          name: "structura_get_toolbox_config",
+          description: "Retrieve the current toolbox configuration from the Erathos canvas.",
+          inputSchema: { type: "object", properties: {} }
+        },
+        {
+          name: "structura_set_toolbox_config",
+          description: "Set the toolbox configuration for the Erathos canvas.",
+          inputSchema: {
+            type: "object",
+            properties: { config: { type: "object" } },
+            required: ["config"]
+          }
+        },
+        {
           name: "structura_create_entity",
           description: "Add a new node/entity to the Erathos canvas.",
           inputSchema: {
@@ -1013,6 +1034,12 @@ const handle_tools_call = (srv: VbsMcpServerInstance, req: McpRequest): McpRespo
     switch (name) {
       case 'structura_get_schema':
         return handle_get_schema(srv, { id: req.id, method: 'atomos-structura/get-schema', params: args });
+      case 'structura_get_toolbox_config':
+        return { result: { success: true, config: srv._state.toolbox_config }, id: req.id };
+      case 'structura_set_toolbox_config':
+        srv._state = { ...srv._state, toolbox_config: args.config };
+        emit_sse(srv._clients, 'toolbox-config', args.config);
+        return { result: { success: true }, id: req.id };
       case 'structura_create_entity':
         return handle_create_entity(srv, { id: req.id, method: 'atomos-structura/create-entity', params: args });
       case 'structura_update_entity':

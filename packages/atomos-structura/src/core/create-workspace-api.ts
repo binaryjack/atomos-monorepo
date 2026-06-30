@@ -1,5 +1,7 @@
+import type { ToolboxConfiguration } from '@atomos-web/prime'
 import type { AppSettings } from '../features/settings-page/types/settings-page.types.js'
 import type { ReduxState, ReduxStore, ViewportState } from '../types/redux-state.types.js'
+import { getToolboxConfig, setToolboxConfig } from './adapters/toolbox-config-manager.js'
 
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
@@ -22,6 +24,11 @@ export interface WorkspaceApi {
   getSettings(): AppSettings | undefined;
   /** Dispatch a settings-updated action. */
   setSettings(settings: AppSettings): void;
+
+  /** Get the current toolbox configuration. */
+  getToolboxConfig(): ToolboxConfiguration;
+  /** Set the toolbox configuration (persisted to localStorage and re-rendered). */
+  setToolboxConfig(config: ToolboxConfiguration): void;
 
   /** Serialize the full Redux state to a JSON string (round-trips via loadWorkspace). */
   saveWorkspace(): string;
@@ -90,6 +97,14 @@ export const createWorkspaceApi = function(store: ReduxStore): WorkspaceApi {
     getSettings: () => store.get_state().workspace.settings,
 
     setSettings: (settings) => store.dispatch({ type: 'settings-updated', settings }),
+
+    getToolboxConfig: () => getToolboxConfig(),
+
+    setToolboxConfig: (config) => {
+      setToolboxConfig(config);
+      // We might need to force a re-render or state update here if the UI doesn't react automatically.
+      // But for now, we just update the persistent store.
+    },
 
     saveWorkspace: () => JSON.stringify(store.get_state()),
 

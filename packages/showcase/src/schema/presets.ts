@@ -128,6 +128,25 @@ export const load_preset = (kernel: SchemaGraphKernel, entityManager: EntityMana
         { source: 'sec-api', target: 'sec-db' }
       ],
       applyAfterLoad: ['auto-layout', 'optimize-connections', 'center-to-schema', 'fit-to-screen']
+    },
+    'massive': {
+      entities: Array.from({ length: 150 }).map((_, i) => ({
+        id: `node-${i}`,
+        name: `Microservice ${i}`,
+        nodeType: i % 7 === 0 ? 'cylinder' : i % 5 === 0 ? 'ellipse' : 'box',
+        position: { x: (i % 15) * 300, y: Math.floor(i / 15) * 200 },
+        properties: [
+          { key: 'status', label: 'Status', type: 'string', value: i % 4 === 0 ? 'Error' : 'Running' },
+          { key: 'version', label: 'Version', type: 'string', value: `v1.${i % 10}.0` }
+        ]
+      })),
+      links: Array.from({ length: 200 }).map((_, i) => {
+        const sourceId = Math.floor(Math.random() * 150);
+        let targetId = Math.floor(Math.random() * 150);
+        while (targetId === sourceId) targetId = Math.floor(Math.random() * 150);
+        return { source: `node-${sourceId}`, target: `node-${targetId}` };
+      }),
+      applyAfterLoad: ['auto-layout', 'optimize-connections', 'center-to-schema', 'fit-to-screen']
     }
   };
 

@@ -35,6 +35,11 @@ export interface WebviewInitConfig {
   schemaId?: string
   /** Optional callback whenever the internal Redux state changes */
   onStateChange?: (state: any) => void
+  /**
+   * Optional initial Redux state to hydrate the canvas with.
+   * Useful when embedding the webview in a React component and you already have the schema data.
+   */
+  initialState?: any
 }
 
 export interface WebviewApp {
@@ -113,6 +118,13 @@ export const initializeStructuraWebview = async (config: WebviewInitConfig): Pro
   // through a single code path and prevents a double SSE connection.
   // Pass instanceId to ensure per-instance localStorage isolation.
   const page = createCanvasPage(instanceId, config?.workspaceConfig, resolvedMcpUrl, config?.onStateChange)
+
+  // If initial state is provided, hydrate the store immediately.
+  if (config?.initialState) {
+    const { createInstanceReduxStore } = await import('../core/create-redux-store.js')
+    const store = createInstanceReduxStore(undefined, instanceId)
+    store.dispatch({ type: 'state-loaded', state: config.initialState })
+  }
 
   // If a specific schema ID was provided (e.g. pre-provisioned by Extension Host),
   // activate it once the store is ready.

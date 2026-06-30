@@ -9,9 +9,25 @@ import { createCanvasPage } from "@atomos-web/structura/dist/preview/create-canv
 import { useEffect, useRef, useId } from "react";
 import { load_preset } from "../schema/presets";
 
+import { initToolboxConfigManager, setAppearanceSettings, setToolboxConfig, setCustomShapes } from "@atomos-web/structura/dist/core/adapters/toolbox-config-manager.js";
+import type { AppSettings, CustomShape } from "@atomos-web/structura/dist/features/settings-page/types/settings-page.types.js";
+import { applyAppearanceTokens } from "@atomos-web/structura/dist/core/presentation/design-system.js";
+
 import "@atomos-web/prime-style/dist/styles.css";
 
-export default function StructuraCanvas({ preset }: { preset?: string }) {
+export default function StructuraCanvas({ 
+  preset,
+  appearance,
+  general,
+  toolbox,
+  shapes
+}: { 
+  preset?: string;
+  appearance?: AppSettings['appearance'];
+  general?: AppSettings['general'];
+  toolbox?: any;
+  shapes?: CustomShape[];
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const reactId = useId();
   // Isolate instance IDs by preset so localStorage state doesn't bleed between different architectures
@@ -27,6 +43,34 @@ export default function StructuraCanvas({ preset }: { preset?: string }) {
 
     try {
       console.log(`Starting native React canvas with Kernel bridge for instance ${instanceId}`);
+      
+      initToolboxConfigManager(instanceId);
+      
+      if (appearance) {
+        setAppearanceSettings(appearance);
+        // Need to force apply on DOM immediately, config manager is just storage
+        applyAppearanceTokens(appearance.entity, appearance.link);
+      }
+      
+      if (general) {
+        // Need to import setGeneralSettings
+        const { setGeneralSettings } = require("@atomos-web/structura/dist/core/adapters/toolbox-config-manager.js");
+        setGeneralSettings(general);
+        
+        // Also inject immediately for the grid and background
+        if (general.canvasBackgroundColor) document.documentElement.style.setProperty('--vbs-bg-canvas', general.canvasBackgroundColor);
+        if (general.gridPrimaryColor) document.documentElement.style.setProperty('--vbs-grid-primary-color', general.gridPrimaryColor);
+        if (general.gridSecondaryColor) document.documentElement.style.setProperty('--vbs-grid-secondary-color', general.gridSecondaryColor);
+      }
+      
+      if (toolbox) {
+        setToolboxConfig(toolbox);
+      }
+      
+      if (shapes) {
+        setCustomShapes(shapes);
+      }
+      
       page = createCanvasPage(instanceId, { allow_multiple_schemas: false });
       
       // Override strictly fixed positioning so it fits the container instead of taking over the full viewport

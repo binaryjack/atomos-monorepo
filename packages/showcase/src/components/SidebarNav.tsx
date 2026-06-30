@@ -67,6 +67,11 @@ export default function SidebarNav() {
         <Link href="/architectures/database" className={getLinkClasses("/architectures/database")}>Database Diagram</Link>
         <Link href="/architectures/activity-workflow" className={getLinkClasses("/architectures/activity-workflow")}>Activity Workflow</Link>
         <Link href="/architectures/security-schema" className={getLinkClasses("/architectures/security-schema")}>Security Schema</Link>
+        <Link href="/architectures/massive-architecture" className={getLinkClasses("/architectures/massive-architecture")}>Massive Architecture</Link>
+
+        <div className="text-[10px] uppercase font-bold text-slate-500/80 mt-6 mb-2 tracking-[0.2em] pl-3">Extensibility</div>
+        <Link href="/customization/themes" className={getLinkClasses("/customization/themes", "pink-400")}>Themes & Skins</Link>
+        <Link href="/customization/toolboxes" className={getLinkClasses("/customization/toolboxes", "amber-400")}>Custom Toolboxes</Link>
 
         <div className="text-[10px] uppercase font-bold text-slate-500/80 mt-6 mb-2 tracking-[0.2em] pl-3">ISO Architecture</div>
         <Link href="/headless" className={getLinkClasses("/headless", "slate-400")}>Headless Pipeline</Link>
