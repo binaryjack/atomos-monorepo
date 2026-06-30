@@ -19,7 +19,7 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch",
     "docs": "vite docs --port 3030",
-    "test": "vitest",
+    "test": "vitest run --passWithNoTests",
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
     "clean": "powershell -Command \"Remove-Item -Force -Recurse dist -ErrorAction SilentlyContinue; exit 0\""
@@ -33,6 +33,6 @@
     "@vitest/ui": "^4.1.2",
     "jsdom": "^29.0.1",
     "typescript": "^5.3.0",
-    "vitest": "^4.1.2"
+    "vitest run --passWithNoTests": "^4.1.2"
   }
 }

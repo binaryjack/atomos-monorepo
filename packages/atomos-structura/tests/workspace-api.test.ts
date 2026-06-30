@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Battle tests — Redux store + WorkspaceApi
  * 
  * localStorage is mocked in-memory so these run in pure Node.
@@ -52,14 +52,14 @@ describe('create_redux_store', () => {
   });
 
   it('initialises with schema-default', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const canvas = getActiveCanvas(store);
     expect(canvas?.active_schema_id).toBe('schema-default');
     expect(canvas?.schemas['schema-default']).toBeDefined();
   });
 
   it('adds an entity', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const e = makeEntity('e1', 'User');
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: e });
     const entities = getActiveCanvas(store)?.schemas['schema-default']?.entities ?? [];
@@ -68,7 +68,7 @@ describe('create_redux_store', () => {
   });
 
   it('updates an entity', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1', 'Old') });
     store.dispatch({ type: 'entity-updated', schema_id: 'schema-default', entity: makeEntity('e1', 'New') });
     const e = getActiveCanvas(store)?.schemas['schema-default']?.entities[0];
@@ -76,14 +76,14 @@ describe('create_redux_store', () => {
   });
 
   it('removes an entity', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
     store.dispatch({ type: 'entity-removed', schema_id: 'schema-default', entity_id: 'e1' });
     expect(getActiveCanvas(store)?.schemas['schema-default']?.entities).toHaveLength(0);
   });
 
   it('moves an entity', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
     store.dispatch({ type: 'entity-moved', schema_id: 'schema-default', entity_id: 'e1', x: 100, y: 200 });
     const e = getActiveCanvas(store)?.schemas['schema-default']?.entities[0];
@@ -91,7 +91,7 @@ describe('create_redux_store', () => {
   });
 
   it('creates a link', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e2') });
     store.dispatch({ type: 'link-created', schema_id: 'schema-default', link_id: 'l1', from_id: 'e1', to_id: 'e2' });
@@ -99,7 +99,7 @@ describe('create_redux_store', () => {
   });
 
   it('removes a link', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e2') });
     store.dispatch({ type: 'link-created', schema_id: 'schema-default', link_id: 'l1', from_id: 'e1', to_id: 'e2' });
@@ -108,7 +108,7 @@ describe('create_redux_store', () => {
   });
 
   it('creates a schema tab', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'schema-created', id: 'schema-2', name: 'Orders' });
     const canvas = getActiveCanvas(store);
     expect(canvas?.schemas['schema-2']).toBeDefined();
@@ -116,14 +116,14 @@ describe('create_redux_store', () => {
   });
 
   it('renames a schema tab', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'schema-created', id: 'schema-2', name: 'Orders' });
     store.dispatch({ type: 'schema-renamed', id: 'schema-2', name: 'Billing' });
     expect(getActiveCanvas(store)?.schemas['schema-2']?.name).toBe('Billing');
   });
 
   it('deletes a schema tab (not active)', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'schema-created', id: 'schema-2', name: 'Orders' });
     // switch back to default so schema-2 is not active
     store.dispatch({ type: 'schema-activated', id: 'schema-default' });
@@ -132,21 +132,21 @@ describe('create_redux_store', () => {
   });
 
   it('activates a schema tab', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'schema-created', id: 'schema-2', name: 'Orders' });
     store.dispatch({ type: 'schema-activated', id: 'schema-2' });
     expect(getActiveCanvas(store)?.active_schema_id).toBe('schema-2');
   });
 
   it('saves and loads settings', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const s = makeSettings();
     store.dispatch({ type: 'settings-updated', settings: s });
     expect(store.get_state().workspace.settings?.general?.gridSize).toBe(20);
   });
 
   it('replaces entire state via state-loaded', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
     expect(getActiveCanvas(store)?.schemas['schema-default']?.entities).toHaveLength(1);
     // Load an explicit clean state with no entities
@@ -174,7 +174,7 @@ describe('create_redux_store', () => {
   });
 
   it('notifies subscribers on dispatch', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const listener = vi.fn();
     store.subscribe(listener);
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
@@ -182,7 +182,7 @@ describe('create_redux_store', () => {
   });
 
   it('unsubscribes correctly', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const listener = vi.fn();
     const unsub = store.subscribe(listener);
     unsub();
@@ -191,7 +191,7 @@ describe('create_redux_store', () => {
   });
 
   it('undo/redo reverts and replays entity addition', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
     expect(store.can_undo()).toBe(true);
     store.undo();
@@ -202,13 +202,13 @@ describe('create_redux_store', () => {
   });
 
   it('viewport-updated does NOT push undo history', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'viewport-updated', viewport: { pan: { x: 100, y: 0 }, zoom: 1.5 } });
     expect(store.can_undo()).toBe(false);
   });
 
   it('reconcile() dispatches without polluting undo history', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.reconcile(() => {
       store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
     });
@@ -217,21 +217,21 @@ describe('create_redux_store', () => {
 
   // ── Canvas-level tests ──
   it('creates a canvas and switches to it', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'canvas-created', id: 'canvas-2', name: 'Diagram 2' });
     expect(store.get_state().workspace.active_canvas_id).toBe('canvas-2');
     expect(store.get_state().workspace.canvases['canvas-2']?.name).toBe('Diagram 2');
   });
 
   it('renames a canvas', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'canvas-created', id: 'canvas-2', name: 'Old Name' });
     store.dispatch({ type: 'canvas-renamed', id: 'canvas-2', name: 'New Name' });
     expect(store.get_state().workspace.canvases['canvas-2']?.name).toBe('New Name');
   });
 
   it('deletes a canvas and switches active', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'canvas-created', id: 'canvas-2', name: 'Temp' });
     store.dispatch({ type: 'canvas-deleted', id: 'canvas-2' });
     expect(store.get_state().workspace.canvases['canvas-2']).toBeUndefined();
@@ -239,14 +239,14 @@ describe('create_redux_store', () => {
   });
 
   it('activates a canvas', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'canvas-created', id: 'canvas-2', name: 'C2' });
     store.dispatch({ type: 'canvas-activated', id: 'canvas-default' });
     expect(store.get_state().workspace.active_canvas_id).toBe('canvas-default');
   });
 
   it('canvas-activated does NOT push undo history', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'canvas-created', id: 'canvas-2', name: 'C2' });
     store.dispatch({ type: 'canvas-activated', id: 'canvas-default' });
     // Only canvas-created (undoable) is in history; canvas-activated is SKIP_HISTORY
@@ -265,19 +265,19 @@ describe('createWorkspaceApi', () => {
   });
 
   it('getSettings() returns undefined initially', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     expect(api.getSettings()).toBeUndefined();
   });
 
   it('setSettings() / getSettings() roundtrip', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     api.setSettings(makeSettings());
     expect(api.getSettings()?.general?.gridSize).toBe(20);
   });
 
   it('saveWorkspace() / loadWorkspace() roundtrip', () => {
-    const api = createWorkspaceApi(create_redux_store());
-    const store2 = create_redux_store();
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
+    const store2 = create_redux_store({ instanceId: 'test-instance' });
     store2.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
     const saved = createWorkspaceApi(store2).saveWorkspace();
     api.loadWorkspace(saved);
@@ -285,19 +285,19 @@ describe('createWorkspaceApi', () => {
   });
 
   it('loadWorkspace() throws on invalid JSON', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     expect(() => api.loadWorkspace('NOT_JSON')).toThrow();
   });
 
   it('listSchemas() returns default schema', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     const list = api.listSchemas();
     expect(list).toHaveLength(1);
     expect(list[0]?.id).toBe('schema-default');
   });
 
   it('createSchema() returns id and appears in listSchemas()', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     const id = api.createSchema('Orders');
     expect(id).toBeTruthy();
     const list = api.listSchemas();
@@ -305,7 +305,7 @@ describe('createWorkspaceApi', () => {
   });
 
   it('renameSchema() updates name', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     const id = api.createSchema('Draft');
     api.renameSchema(id, 'Final');
     const info = api.listSchemas().find(s => s.id === id);
@@ -313,7 +313,7 @@ describe('createWorkspaceApi', () => {
   });
 
   it('deleteSchema() removes it', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     const id = api.createSchema('Temp');
     // activate default first so Temp can be deleted
     api.activateSchema('schema-default');
@@ -322,14 +322,14 @@ describe('createWorkspaceApi', () => {
   });
 
   it('activateSchema() + getActiveSchemaId() work', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     const id = api.createSchema('New');
     api.activateSchema(id);
     expect(api.getActiveSchemaId()).toBe(id);
   });
 
   it('listCanvases() returns default canvas', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     const list = api.listCanvases();
     expect(list).toHaveLength(1);
     expect(list[0]?.id).toBe('canvas-default');
@@ -344,7 +344,7 @@ describe('create_redux_store — state-reset', () => {
   });
 
   it('resets entities to empty', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e2') });
     store.dispatch({ type: 'state-reset' });
@@ -352,7 +352,7 @@ describe('create_redux_store — state-reset', () => {
   });
 
   it('resets viewport to default values', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'viewport-updated', viewport: { pan: { x: 500, y: 300 }, zoom: 2.5 } });
     store.dispatch({ type: 'state-reset' });
     const vp = getActiveCanvas(store)?.viewport;
@@ -361,7 +361,7 @@ describe('create_redux_store — state-reset', () => {
   });
 
   it('preserves the original WorkspaceConfig after reset', () => {
-    const store = create_redux_store({ headless: true, allow_multiple_schemas: false });
+    const store = create_redux_store({ instanceId: 'test-instance', config: { headless: true, allow_multiple_schemas: false } });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
     store.dispatch({ type: 'state-reset' });
     expect(store.get_state().workspace.config?.headless).toBe(true);
@@ -369,7 +369,7 @@ describe('create_redux_store — state-reset', () => {
   });
 
   it('does NOT push state-reset to undo history', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e1') });
     store.undo(); // pop the entity-added
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makeEntity('e2') });
@@ -382,7 +382,7 @@ describe('create_redux_store — state-reset', () => {
   });
 
   it('resets custom schemas added by the user', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     store.dispatch({ type: 'schema-created', id: 'schema-custom', name: 'Custom' });
     store.dispatch({ type: 'state-reset' });
     expect(getActiveCanvas(store)?.schemas['schema-custom']).toBeUndefined();
@@ -390,7 +390,7 @@ describe('create_redux_store — state-reset', () => {
   });
 
   it('notifies subscribers when state-reset fires', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const spy = vi.fn();
     store.subscribe(spy);
     store.dispatch({ type: 'state-reset' });
@@ -422,35 +422,35 @@ describe('createWorkspaceApi — viewport and canvas', () => {
   });
 
   it('getViewport() returns initial values of zoom=1 and pan={0,0}', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     const vp = api.getViewport();
     expect(vp.zoom).toBe(1);
     expect(vp.pan).toEqual({ x: 0, y: 0 });
   });
 
   it('setZoom() updates zoom in Redux state', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const api = createWorkspaceApi(store);
     api.setZoom(2);
     expect(getActiveCanvas(store)?.viewport.zoom).toBe(2);
   });
 
   it('setZoom() clamps below ZOOM_MIN (0.1)', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const api = createWorkspaceApi(store);
     api.setZoom(0.0001);
     expect(getActiveCanvas(store)?.viewport.zoom).toBe(0.1);
   });
 
   it('setZoom() clamps above ZOOM_MAX (4)', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const api = createWorkspaceApi(store);
     api.setZoom(99);
     expect(getActiveCanvas(store)?.viewport.zoom).toBe(4);
   });
 
   it('setZoom() preserves existing pan values', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const api = createWorkspaceApi(store);
     api.setViewport({ zoom: 1, pan: { x: 200, y: 150 } });
     api.setZoom(1.5);
@@ -458,7 +458,7 @@ describe('createWorkspaceApi — viewport and canvas', () => {
   });
 
   it('setViewport() sets exact zoom and pan', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const api = createWorkspaceApi(store);
     api.setViewport({ zoom: 1.8, pan: { x: 100, y: 50 } });
     const vp = getActiveCanvas(store)?.viewport;
@@ -467,7 +467,7 @@ describe('createWorkspaceApi — viewport and canvas', () => {
   });
 
   it('centerOnScreen() pans viewport so centroid is centered at 800x600', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const api = createWorkspaceApi(store);
     // Two entities at (0,0) and (200,100) → centroid = (150,75) (incl dimensions/2)
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makePositionedEntity('e1', 0, 0) });
@@ -480,7 +480,7 @@ describe('createWorkspaceApi — viewport and canvas', () => {
   });
 
   it('centerOnScreen() is a no-op when there are no entities', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const api = createWorkspaceApi(store);
     api.centerOnScreen();
     const vp = getActiveCanvas(store)?.viewport;
@@ -488,7 +488,7 @@ describe('createWorkspaceApi — viewport and canvas', () => {
   });
 
   it('fitToScreen() produces zoom ≤ 2 and updates pan', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const api = createWorkspaceApi(store);
     // Two far-apart entities
     store.dispatch({ type: 'entity-added', schema_id: 'schema-default', entity: makePositionedEntity('e1', 0, 0) });
@@ -501,7 +501,7 @@ describe('createWorkspaceApi — viewport and canvas', () => {
   });
 
   it('fitToScreen() caps zoom at 2 even for very small content', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const api = createWorkspaceApi(store);
     // Tiny entity surrounded by huge screen → zoom would be > 2 without cap
     store.dispatch({
@@ -513,7 +513,7 @@ describe('createWorkspaceApi — viewport and canvas', () => {
   });
 
   it('fitToScreen() is a no-op when there are no entities', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const api = createWorkspaceApi(store);
     api.fitToScreen();
     const vp = getActiveCanvas(store)?.viewport;
@@ -522,14 +522,14 @@ describe('createWorkspaceApi — viewport and canvas', () => {
   });
 
     it('getViewport() reflects changes after setZoom()', () => {
-      const api = createWorkspaceApi(create_redux_store());
+      const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
       api.setZoom(1.25);
       expect(api.getViewport().zoom).toBe(1.25);
     });
   });
 
   it('createCanvas() creates and activates new canvas', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     const id = api.createCanvas('Board 2');
     expect(id).toBeTruthy();
     expect(api.getActiveCanvasId()).toBe(id);
@@ -537,14 +537,14 @@ describe('createWorkspaceApi — viewport and canvas', () => {
   });
 
   it('renameCanvas() updates canvas name', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     const id = api.createCanvas('Old');
     api.renameCanvas(id, 'New');
     expect(api.listCanvases().find(c => c.id === id)?.name).toBe('New');
   });
 
   it('deleteCanvas() removes canvas', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     const id = api.createCanvas('Temp');
     api.activateCanvas('canvas-default');
     api.deleteCanvas(id);
@@ -552,7 +552,7 @@ describe('createWorkspaceApi — viewport and canvas', () => {
   });
 
   it('activateCanvas() switches active canvas', () => {
-    const api = createWorkspaceApi(create_redux_store());
+    const api = createWorkspaceApi(create_redux_store({ instanceId: 'test-instance' }));
     const id = api.createCanvas('Board 2');
     api.activateCanvas('canvas-default');
     expect(api.getActiveCanvasId()).toBe('canvas-default');
@@ -561,7 +561,7 @@ describe('createWorkspaceApi — viewport and canvas', () => {
   });
 
   it('subscribe() fires on each mutation', () => {
-    const store = create_redux_store();
+    const store = create_redux_store({ instanceId: 'test-instance' });
     const api = createWorkspaceApi(store);
     const listener = vi.fn();
     const unsub = api.subscribe(listener);

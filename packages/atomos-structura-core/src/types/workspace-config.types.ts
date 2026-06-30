@@ -18,4 +18,12 @@ export interface WorkspaceConfig {
    * Hook for fetching options asynchronously for a property dropdown
    */
   readonly onLoadOptions?: (propertyKey: string, entityId: string) => Promise<{ label: string; value: unknown }[]>;
+  /**
+   * Inject an optional invisible edge zone that displays a message when hovered.
+   * Particularly useful to guide users when the canvas automatically enters compact/read-only mode.
+   */
+  readonly hoverZoneMessage?: {
+    zone: 'top' | 'bottom' | 'left' | 'right' | 'all';
+    text: string;
+  };
 }

@@ -81,6 +81,26 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
   canvasWrap.style.cssText = `position:absolute;top:${TAB_H}px;left:0;right:0;bottom:0;overflow:hidden;`;
   root.appendChild(canvasWrap);
 
+  // Inject Hover Zones if configured
+  if (config?.hoverZoneMessage) {
+    const { zone, text } = config.hoverZoneMessage;
+    const zonesToCreate = zone === 'all' ? ['top', 'bottom', 'left', 'right'] : [zone];
+    
+    zonesToCreate.forEach(z => {
+      const hz = document.createElement('div');
+      hz.className = 'vbs-hover-zone';
+      hz.setAttribute('data-zone', z);
+      hz.setAttribute('data-hover-text', text);
+      
+      if (z === 'top') hz.style.cssText = 'top: 0; left: 0; right: 0; height: 20px;';
+      else if (z === 'bottom') hz.style.cssText = 'bottom: 0; left: 0; right: 0; height: 20px;';
+      else if (z === 'left') hz.style.cssText = 'top: 0; bottom: 0; left: 0; width: 20px;';
+      else if (z === 'right') hz.style.cssText = 'top: 0; bottom: 0; right: 0; width: 20px;';
+      
+      canvasWrap.appendChild(hz);
+    });
+  }
+
   // SVG — no viewBox, 1 unit = 1 CSS px
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', '100%');
@@ -461,6 +481,46 @@ export const createCanvasPage = function(instanceId: string, config?: WorkspaceC
           transform: translateX(-50%) scale(1) !important;
         }
       }
+      @container (max-width: 400px) {
+        .vbs-palette, .vbs-bottom-toolbar, .vbs-schema-tabs, .vbs-burger-menu {
+          display: none !important;
+        }
+        /* Disable interactions on canvas elements, making it read-only */
+        #vbs-viewport > g, .vbs-entity, .vbs-link {
+          pointer-events: none !important;
+        }
+      }
+      .vbs-hover-zone {
+        position: absolute;
+        z-index: 9999;
+        pointer-events: auto;
+      }
+      .vbs-hover-zone::after {
+        content: attr(data-hover-text);
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+        background: var(--vbs-bg-panel, #1e293b);
+        color: var(--vbs-text-primary, #f8fafc);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        white-space: nowrap;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        border: 1px solid var(--vbs-border-color, #334155);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      }
+      .vbs-hover-zone:hover::after {
+        opacity: 1;
+      }
+      .vbs-hover-zone[data-zone="top"]::after { top: 100%; left: 50%; transform: translateX(-50%) translateY(4px); margin-top: 4px; }
+      .vbs-hover-zone[data-zone="bottom"]::after { bottom: 100%; left: 50%; transform: translateX(-50%) translateY(-4px); margin-bottom: 4px; }
+      .vbs-hover-zone[data-zone="left"]::after { left: 100%; top: 50%; transform: translateY(-50%) translateX(4px); margin-left: 4px; }
+      .vbs-hover-zone[data-zone="right"]::after { right: 100%; top: 50%; transform: translateY(-50%) translateX(-4px); margin-right: 4px; }
+      .vbs-hover-zone:hover[data-zone="top"]::after { transform: translateX(-50%) translateY(0); }
+      .vbs-hover-zone:hover[data-zone="bottom"]::after { transform: translateX(-50%) translateY(0); }
+      .vbs-hover-zone:hover[data-zone="left"]::after { transform: translateY(-50%) translateX(0); }
+      .vbs-hover-zone:hover[data-zone="right"]::after { transform: translateY(-50%) translateX(0); }
     `;
     document.head.appendChild(style);
   }

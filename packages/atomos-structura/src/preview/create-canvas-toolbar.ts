@@ -394,6 +394,7 @@ export const createCanvasToolbar = function(config: CanvasToolbarConfig): { bott
   // Assemble
 
   const topBurger = document.createElement('div');
+  topBurger.className = 'vbs-burger-menu';
   topBurger.style.cssText = 'position:relative; display:flex; align-items:center; z-index:50;';
 
   const moreMenu = document.createElement('div');

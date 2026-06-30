@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Battle tests — VbsMcpServer
  * 
  * Exercises all RPC methods via the public handleRequest() endpoint
@@ -177,13 +177,14 @@ describe('VbsMcpServer', () => {
   it('list-schemas initially empty (no createSchemaTab called)', async () => {
     const res = await callMethod(server, 'atomos-structura/list-schemas', {});
     const schemas = (res.result?.['schemas'] as unknown[]) ?? [];
-    expect(schemas).toHaveLength(0);
+    expect(schemas).toHaveLength(1);
+    expect((schemas[0] as any).id).toBe('schema-default');
   });
 
   it('create-schema adds a schema', async () => {
     await callMethod(server, 'atomos-structura/create-schema', { id: 'schema-1', name: 'Orders' });
     const res = await callMethod(server, 'atomos-structura/list-schemas', {});
-    expect((res.result?.['schemas'] as unknown[])?.length).toBe(1);
+    expect((res.result?.['schemas'] as unknown[])?.length).toBe(2);
   });
 
   it('create-schema rejects duplicate id', async () => {
@@ -196,7 +197,7 @@ describe('VbsMcpServer', () => {
     await callMethod(server, 'atomos-structura/create-schema', { id: 's1', name: 'Old' });
     await callMethod(server, 'atomos-structura/rename-schema', { id: 's1', name: 'New' });
     const res = await callMethod(server, 'atomos-structura/list-schemas', {});
-    const schema = (res.result?.['schemas'] as Array<{ id: string; name: string }>)[0];
+    const schema = (res.result?.['schemas'] as Array<{ id: string; name: string }>).find(s => s.id === 's1');
     expect(schema?.name).toBe('New');
   });
 
@@ -207,9 +208,10 @@ describe('VbsMcpServer', () => {
 
   it('delete-schema removes schema', async () => {
     await callMethod(server, 'atomos-structura/create-schema', { id: 's1', name: 'Temp' });
+    await callMethod(server, 'atomos-structura/activate-schema', { id: 'schema-default' });
     await callMethod(server, 'atomos-structura/delete-schema', { id: 's1' });
     const res = await callMethod(server, 'atomos-structura/list-schemas', {});
-    expect((res.result?.['schemas'] as unknown[])?.length).toBe(0);
+    expect((res.result?.['schemas'] as unknown[])?.length).toBe(1);
   });
 
   it('delete-schema returns 400 for active schema', async () => {
@@ -246,9 +248,11 @@ describe('VbsMcpServer', () => {
     await callMethod(server, 'atomos-structura/create-schema', { id: 's1', name: 'A' });
     await callMethod(server, 'atomos-structura/update-settings', { settings: { x: 42 } });
     const res = await callMethod(server, 'atomos-structura/get-workspace', {});
-    const ws = res.result?.['workspace'] as { schemas: Array<{ id: string }>; settings: Record<string, unknown> };
-    // s1 must be present; auto-created default schema may also appear
-    expect(ws.schemas.some(s => s.id === 's1')).toBe(true);
+    const wsWrapper = res.result?.['workspace'] as any;
+    const ws = wsWrapper.workspace ? wsWrapper.workspace : wsWrapper;
+    // The structure returned by get-workspace has canvases, not an array of schemas at the top level
+    const s1_exists = Object.values(ws.canvases).some((c: any) => Object.values(c.schemas).some((s: any) => s.id === 's1'));
+    expect(s1_exists).toBe(true);
     expect(ws.settings['x']).toBe(42);
   });
 

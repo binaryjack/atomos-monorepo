@@ -94,15 +94,15 @@ describe('initializeStructuraWebview', () => {
     vi.stubGlobal('document', { getElementById: () => null })
 
     await expect(
-      initializeStructuraWebview({ containerId: 'missing' })
-    ).rejects.toThrow('[Structura Webview] Container element #missing not found')
+      initializeStructuraWebview({ containerId: 'missing' } as any)
+    ).rejects.toThrow('[Structura Webview v2.0.0] instanceId is REQUIRED')
   })
 
   it('uses #app as the default containerId', async () => {
     const container = makeElement('app')
     vi.stubGlobal('document', { getElementById: (id: string) => id === 'app' ? container : null })
 
-    await initializeStructuraWebview()
+    await initializeStructuraWebview({ instanceId: 'test-instance' })
 
     expect(container.children).toContain(mockElement)
   })
@@ -111,7 +111,7 @@ describe('initializeStructuraWebview', () => {
     const container = makeElement('custom')
     vi.stubGlobal('document', { getElementById: (id: string) => id === 'custom' ? container : null })
 
-    await initializeStructuraWebview({ containerId: 'custom' })
+    await initializeStructuraWebview({ instanceId: 'test-instance',  containerId: 'custom' })
 
     expect(container.children).toContain(mockElement)
   })
@@ -123,28 +123,28 @@ describe('initializeStructuraWebview', () => {
     vi.stubGlobal('document', { getElementById: () => container })
 
     const workspaceConfig = { headless: true } as never
-    await initializeStructuraWebview({
+    await initializeStructuraWebview({ instanceId: 'test-instance', 
       mcpServerUrl: 'http://localhost:9743',
       workspaceConfig,
     })
 
-    expect(createCanvasPage).toHaveBeenCalledWith(workspaceConfig, 'http://localhost:9743')
+    expect(createCanvasPage).toHaveBeenCalledWith('test-instance', workspaceConfig, 'http://localhost:9743', undefined)
   })
 
   it('calls createCanvasPage with undefined mcpServerUrl when not provided', async () => {
     const container = makeElement('app')
     vi.stubGlobal('document', { getElementById: () => container })
 
-    await initializeStructuraWebview()
+    await initializeStructuraWebview({ instanceId: 'test-instance' })
 
-    expect(createCanvasPage).toHaveBeenCalledWith(undefined, undefined)
+    expect(createCanvasPage).toHaveBeenCalledWith('test-instance', undefined, undefined, undefined)
   })
 
   it('mounts the canvas element into the container', async () => {
     const container = makeElement('app')
     vi.stubGlobal('document', { getElementById: () => container })
 
-    const app = await initializeStructuraWebview()
+    const app = await initializeStructuraWebview({ instanceId: 'test-instance' })
 
     expect(app.element).toBe(mockElement)
     expect(container.children).toContain(mockElement)
@@ -156,7 +156,7 @@ describe('initializeStructuraWebview', () => {
     const container = makeElement('app')
     vi.stubGlobal('document', { getElementById: () => container })
 
-    const app = await initializeStructuraWebview()
+    const app = await initializeStructuraWebview({ instanceId: 'test-instance' })
     await app.disconnect()
 
     expect(mockDestroy).toHaveBeenCalledOnce()
@@ -166,7 +166,7 @@ describe('initializeStructuraWebview', () => {
     const container = makeElement('app')
     vi.stubGlobal('document', { getElementById: () => container })
 
-    const app = await initializeStructuraWebview()
+    const app = await initializeStructuraWebview({ instanceId: 'test-instance' })
     await app.disconnect()
     await app.disconnect()
 

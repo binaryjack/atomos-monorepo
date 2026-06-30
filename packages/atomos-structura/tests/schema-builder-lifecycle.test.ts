@@ -40,7 +40,7 @@ describe('SchemaBuilder.clearMemory()', () => {
   beforeEach(() => ls.clear());
 
   it('resets Redux state so added entities are gone', () => {
-    const builder = createSchemaBuilder();
+    const builder = createSchemaBuilder({ instanceId: 'test-instance' });
     builder.addEntity(makeEntity('e1'));
     builder.addEntity(makeEntity('e2'));
     builder.clearMemory();
@@ -49,18 +49,18 @@ describe('SchemaBuilder.clearMemory()', () => {
   });
 
   it('removes all vbe2:* localStorage keys', () => {
-    const builder = createSchemaBuilder();
-    ls.setItem('vbe2:redux-state', '{"test":1}');
-    ls.setItem('vbe2:canvas-viewport', '{"zoom":1}');
+    const builder = createSchemaBuilder({ instanceId: 'test-instance' });
+    ls.setItem('test-instance:vbe2:redux-state', '{"test":1}');
+    ls.setItem('test-instance:vbe2:canvas-viewport', '{"test":2}');
     ls.setItem('other-key', 'keep-me');
     builder.clearMemory();
-    expect(ls.getItem('vbe2:redux-state')).toBeNull();
-    expect(ls.getItem('vbe2:canvas-viewport')).toBeNull();
+    expect(ls.getItem('test-instance:vbe2:redux-state')).toBeNull();
+    expect(ls.getItem('test-instance:vbe2:canvas-viewport')).toBeNull();
     expect(ls.getItem('other-key')).toBe('keep-me');
   });
 
   it('session remains usable — can add entities after clearMemory', () => {
-    const builder = createSchemaBuilder();
+    const builder = createSchemaBuilder({ instanceId: 'test-instance' });
     builder.addEntity(makeEntity('e1'));
     builder.clearMemory();
     builder.addEntity(makeEntity('e2'));
@@ -68,14 +68,14 @@ describe('SchemaBuilder.clearMemory()', () => {
   });
 
   it('preserves WorkspaceConfig after clearMemory', () => {
-    const builder = createSchemaBuilder({ config: { headless: true } });
+    const builder = createSchemaBuilder({ instanceId: 'test-instance',  config: { headless: true } });
     builder.addEntity(makeEntity('e1'));
     builder.clearMemory();
     expect(builder.store.get_state().workspace.config?.headless).toBe(true);
   });
 
   it('notifies store subscribers on clearMemory', () => {
-    const builder = createSchemaBuilder();
+    const builder = createSchemaBuilder({ instanceId: 'test-instance' });
     const spy = vi.fn();
     builder.store.subscribe(spy);
     builder.addEntity(makeEntity('e1')); // spy +1
@@ -91,18 +91,18 @@ describe('SchemaBuilder.close()', () => {
   beforeEach(() => ls.clear());
 
   it('removes all vbe2:* localStorage keys', () => {
-    const builder = createSchemaBuilder();
-    ls.setItem('vbe2:redux-state', '{"test":1}');
-    ls.setItem('vbe2:canvas-viewport', '{"zoom":1}');
+    const builder = createSchemaBuilder({ instanceId: 'test-instance' });
+    ls.setItem('test-instance:vbe2:redux-state', '{"test":1}');
+    ls.setItem('test-instance:vbe2:canvas-viewport', '{"test":2}');
     ls.setItem('unrelated', 'stays');
     builder.close();
-    expect(ls.getItem('vbe2:redux-state')).toBeNull();
-    expect(ls.getItem('vbe2:canvas-viewport')).toBeNull();
+    expect(ls.getItem('test-instance:vbe2:redux-state')).toBeNull();
+    expect(ls.getItem('test-instance:vbe2:canvas-viewport')).toBeNull();
     expect(ls.getItem('unrelated')).toBe('stays');
   });
 
   it('stops notifying listeners after close', () => {
-    const builder = createSchemaBuilder();
+    const builder = createSchemaBuilder({ instanceId: 'test-instance' });
     const spy = vi.fn();
     builder.store.subscribe(spy);
     builder.addEntity(makeEntity('pre'));  // fires spy
@@ -119,7 +119,7 @@ describe('SchemaBuilder.close()', () => {
   });
 
   it('is idempotent — calling close() twice does not throw', () => {
-    const builder = createSchemaBuilder();
+    const builder = createSchemaBuilder({ instanceId: 'test-instance' });
     expect(() => { builder.close(); builder.close(); }).not.toThrow();
   });
 });
@@ -128,14 +128,14 @@ describe('SchemaBuilder.close()', () => {
 
 describe('SchemaBuilder.menuControl', () => {
   it('is initialized from WorkspaceConfig.menu', () => {
-    const builder = createSchemaBuilder({
+    const builder = createSchemaBuilder({ instanceId: 'test-instance', 
       config: { menu: { zoom_in: { available: false } } },
     });
     expect(builder.menuControl.getConfig().zoom_in?.available).toBe(false);
   });
 
   it('setAvailable() toggles at runtime', () => {
-    const builder = createSchemaBuilder({
+    const builder = createSchemaBuilder({ instanceId: 'test-instance', 
       config: { menu: { export: { available: true } } },
     });
     builder.menuControl.setAvailable('export', false);
@@ -143,7 +143,7 @@ describe('SchemaBuilder.menuControl', () => {
   });
 
   it('subscribe() delivers config changes', () => {
-    const builder = createSchemaBuilder();
+    const builder = createSchemaBuilder({ instanceId: 'test-instance' });
     const spy = vi.fn();
     builder.menuControl.subscribe(spy);
     builder.menuControl.setAvailable('auto_layout', false);

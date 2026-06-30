@@ -302,8 +302,10 @@ const process_request = (srv: VbsMcpServerInstance, req: McpRequest): McpRespons
 
 const handle_create_entity = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
   const params = req.params as { schema_id?: string } & Entity;
-  const { schema_id, ...entity } = params;
-  if (!schema_id) return { error: { code: 400, message: 'schema_id is required' }, id: req.id };
+  const active_schema = get_active_schema(srv._state);
+  const schema_id = params.schema_id || active_schema?.id;
+  const { schema_id: _ignore, ...entity } = params;
+  if (!schema_id) return { error: { code: 400, message: 'No active schema' }, id: req.id };
   if (!find_canvas_for_schema(srv._state, schema_id)) return { error: { code: 404, message: 'Schema not found' }, id: req.id };
   srv._state = update_schema_by_id(srv._state, schema_id, s => ({
     ...s, entities: [...s.entities.filter(e => e.id !== entity.id), entity as Entity],
@@ -326,8 +328,10 @@ const handle_get_entity = (srv: VbsMcpServerInstance, req: McpRequest): McpRespo
 
 const handle_update_entity = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
   const params = req.params as { schema_id?: string } & Entity;
-  const { schema_id, ...entity } = params;
-  if (!schema_id) return { error: { code: 400, message: 'schema_id is required' }, id: req.id };
+  const active_schema = get_active_schema(srv._state);
+  const schema_id = params.schema_id || active_schema?.id;
+  const { schema_id: _ignore, ...entity } = params;
+  if (!schema_id) return { error: { code: 400, message: 'No active schema' }, id: req.id };
   const canvas = find_canvas_for_schema(srv._state, schema_id);
   const schema = canvas?.schemas[schema_id];
   if (!schema?.entities.some(e => e.id === (entity as Entity).id))
@@ -375,8 +379,11 @@ const handle_report_progress = (srv: VbsMcpServerInstance, req: McpRequest): Mcp
 };
 
 const handle_delete_entity = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
-  const { schema_id, entityId } = req.params as { schema_id?: string; entityId: string };
-  if (!schema_id) return { error: { code: 400, message: 'schema_id is required' }, id: req.id };
+  const params = req.params as { schema_id?: string; entityId: string };
+  const active_schema = get_active_schema(srv._state);
+  const schema_id = params.schema_id || active_schema?.id;
+  const entityId = params.entityId;
+  if (!schema_id) return { error: { code: 400, message: 'No active schema' }, id: req.id };
   const canvas = find_canvas_for_schema(srv._state, schema_id);
   const schema = canvas?.schemas[schema_id];
   if (!schema?.entities.some(e => e.id === entityId))
@@ -394,8 +401,10 @@ const handle_delete_entity = (srv: VbsMcpServerInstance, req: McpRequest): McpRe
 
 const handle_create_link = (srv: VbsMcpServerInstance, req: McpRequest): McpResponse => {
   const params = req.params as { schema_id?: string } & LinkProps;
-  const { schema_id, ...link } = params;
-  if (!schema_id) return { error: { code: 400, message: 'schema_id is required' }, id: req.id };
+  const active_schema = get_active_schema(srv._state);
+  const schema_id = params.schema_id || active_schema?.id;
+  const { schema_id: _ignore, ...link } = params;
+  if (!schema_id) return { error: { code: 400, message: 'No active schema' }, id: req.id };
   if (!find_canvas_for_schema(srv._state, schema_id)) return { error: { code: 404, message: 'Schema not found' }, id: req.id };
   srv._state = update_schema_by_id(srv._state, schema_id, s => ({
     ...s, links: [...s.links.filter(l => l.id !== (link as LinkProps).id), link as LinkProps],
@@ -615,8 +624,13 @@ function isPathAllowed(filePath: string, allowedRoots: string[]): boolean {
 
 function hydraterPlanCodernic(payload: any): McpWorkspaceState {
   // Si le payload contient déjà des canvases, c'est un format Atomos natif, on ne fait rien
-  if (payload.workspace && payload.workspace.canvases) {
+  if (payload.canvases || (payload.workspace && payload.workspace.canvases)) {
     return payload as McpWorkspaceState;
+  }
+
+  // Si c'est un format legacy Atomos, on laisse handle_load_workspace le gérer
+  if (payload.schemas || (payload.workspace && payload.workspace.schemas)) {
+    return payload;
   }
 
   // Extraction des lanes (Format Codernic de dag_config.schema.json / dag-generator.ts)
